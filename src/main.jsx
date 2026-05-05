@@ -34,6 +34,7 @@ const INITIAL_DRAGON_CELL = { col: 14, row: 14 };
 const TRACKS = [
   { title: 'Cabbage Carousel', file: '__Cabbage Carousel__.wav' },
   { title: 'Glitch Anthem', file: 'Glitch Anthem.wav' },
+  { title: 'Glitch Orchard', file: 'Glitch Orchard.wav' },
   { title: 'Soldered Stardust', file: 'Soldered Stardust.wav' },
 ];
 
@@ -272,6 +273,8 @@ function App() {
     setCurrentTrack((track) => (track + 1) % TRACKS.length);
     setIsPlaying(true);
   }
+
+  const track = TRACKS[currentTrack];
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -1131,7 +1134,39 @@ function App() {
 
   return (
     <main>
-      <canvas ref={canvasRef} aria-label="19 by 19 turn-based RPG board" />
+      <section className="game-shell">
+        <canvas ref={canvasRef} aria-label="19 by 19 turn-based RPG board" />
+        <aside className="music-player" aria-label="Music player">
+          <audio
+            ref={audioRef}
+            src={`/${encodeURIComponent(track.file)}`}
+            preload="auto"
+            onEnded={onTrackEnded}
+          />
+          <div className="player-screen">
+            <span className="track-label">Track {currentTrack + 1}/{TRACKS.length}</span>
+            <strong>{track.title}</strong>
+          </div>
+          <div className="player-buttons">
+            <button type="button" onClick={playPauseMusic}>
+              {isPlaying ? 'Pause' : 'Play'}
+            </button>
+            <button type="button" onClick={skipTrack}>
+              Skip
+            </button>
+          </div>
+          <label className="volume-control">
+            <span>Volume {Math.round(volume * 100)}%</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={Math.round(volume * 100)}
+              onChange={(event) => setVolume(Number(event.target.value) / 100)}
+            />
+          </label>
+        </aside>
+      </section>
     </main>
   );
 }

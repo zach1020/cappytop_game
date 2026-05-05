@@ -746,7 +746,7 @@ function App() {
       }
     }
 
-    function drawTerrainTile(tile) {
+    function drawTerrainTile(tile, lifted = false) {
       const isWater = tile.terrain === 'water';
       const image = isWater ? waterImage : grassImage;
       const frameSize = isWater ? WATER_FRAME_SIZE : GRASS_FRAME_SIZE;
@@ -757,18 +757,28 @@ function App() {
       const sourceY = Math.floor(frame / columns) * frameSize;
       const destX = state.boardOffsetX + tile.col * state.tileSize;
       const destY = state.boardOffsetY + tile.row * state.tileSize;
+      const lift = lifted ? state.tileSize * 0.14 : 0;
+      const scale = lifted ? 1.16 : 1;
+      const drawSize = state.tileSize * scale + 0.6;
 
+      ctx.save();
+      if (lifted) {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.42)';
+        ctx.shadowBlur = 14;
+        ctx.shadowOffsetY = 9;
+      }
       ctx.drawImage(
         image,
         sourceX,
         sourceY,
         frameSize,
         frameSize,
-        destX,
-        destY,
-        state.tileSize + 0.6,
-        state.tileSize + 0.6,
+        destX - (drawSize - state.tileSize) / 2,
+        destY - lift - (drawSize - state.tileSize) / 2,
+        drawSize,
+        drawSize,
       );
+      ctx.restore();
     }
 
     function drawCellHighlight(cell, fill, stroke, inset = 2) {
@@ -969,11 +979,23 @@ function App() {
       ctx.save();
       applyCameraTransform();
 
+      const hoverTile = state.hoverCell
+        ? boardTiles.find((tile) => tile.col === state.hoverCell.col && tile.row === state.hoverCell.row)
+        : null;
+
       for (const tile of boardTiles) {
+        if (tile === hoverTile) {
+          continue;
+        }
         drawTerrainTile(tile);
       }
 
       drawBoardChrome();
+
+      if (hoverTile) {
+        drawTerrainTile(hoverTile, true);
+        drawCellHighlight(hoverTile, null, 'rgba(255, 245, 176, 0.72)', 1);
+      }
 
       const heroIsBehindDragon = state.hero.row <= state.dragon.row;
       if (heroIsBehindDragon) {

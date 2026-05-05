@@ -29,7 +29,7 @@ const FIREBALL_COLUMNS = 6;
 const FIREBALL_FRAMES = 18;
 const FIREBALL_FPS = 18;
 const ARCHER_FRAME_WIDTH = 502;
-const ARCHER_FRAME_HEIGHT = 420;
+const ARCHER_FRAME_HEIGHT = 560;
 const ARCHER_COLUMNS = 6;
 const ARCHER_ATTACK_FRAMES = 18;
 const ARCHER_ATTACK_FPS = 14;
@@ -64,7 +64,6 @@ const EDGE_FOG_MIN_SCALE = 1.08;
 const INITIAL_HERO_CELL = { col: 5, row: 9 };
 const INITIAL_WIZARD_CELL = { col: 4, row: 10 };
 const INITIAL_ARCHER_CELL = { col: 6, row: 10 };
-const INITIAL_DRAGON_CELL = { col: 14, row: 14 };
 const CHEST_CELL = { col: 17, row: 18 };
 
 const TRACKS = [
@@ -96,6 +95,172 @@ const TERRAIN_MAP = [
   '...................',
 ];
 
+const STAGES = [
+  {
+    name: 'Meadow Ambush',
+    terrain: TERRAIN_MAP,
+    heroes: { hero: INITIAL_HERO_CELL, wizard: INITIAL_WIZARD_CELL, archer: INITIAL_ARCHER_CELL },
+    chest: CHEST_CELL,
+    dragons: [{ id: 'dragon_1', label: 'Dragon', col: 14, row: 14, hp: 30, damage: 3, moveRange: 5, attackRange: 7 }],
+  },
+  {
+    name: 'Split Creek',
+    terrain: [
+      '...................',
+      '....~~~............',
+      '....~~~.......~~~..',
+      '....~~~.......~~~..',
+      '.............~~~...',
+      '.........~~~~......',
+      '.........~~~~......',
+      '...~~~.............',
+      '...~~~......~~~....',
+      '...~~~......~~~....',
+      '..........~~~~.....',
+      '..........~~~~.....',
+      '.....~~~...........',
+      '.....~~~.....~~~...',
+      '............~~~....',
+      '...~~~~............',
+      '...~~~~............',
+      '..............~~~..',
+      '...................',
+    ],
+    heroes: { hero: { col: 3, row: 9 }, wizard: { col: 2, row: 10 }, archer: { col: 4, row: 10 } },
+    chest: { col: 17, row: 2 },
+    dragons: [
+      { id: 'dragon_1', label: 'North Dragon', col: 14, row: 5, hp: 28, damage: 3, moveRange: 5, attackRange: 7 },
+      { id: 'dragon_2', label: 'South Dragon', col: 15, row: 15, hp: 26, damage: 3, moveRange: 5, attackRange: 7 },
+    ],
+  },
+  {
+    name: 'Marsh Gate',
+    terrain: [
+      '......~~~..........',
+      '......~~~....~~~...',
+      '..~~~........~~~...',
+      '..~~~..............',
+      '..~~~....~~~~......',
+      '........~~~~.......',
+      '........~~~~..~~~..',
+      '...~~~.........~~~.',
+      '...~~~.............',
+      '.........~~~.......',
+      '.........~~~.......',
+      '.....~~~......~~~..',
+      '.....~~~......~~~..',
+      '..............~~~..',
+      '..~~~~.............',
+      '..~~~~.....~~~.....',
+      '...........~~~.....',
+      '......~~~..........',
+      '...................',
+    ],
+    heroes: { hero: { col: 2, row: 2 }, wizard: { col: 1, row: 3 }, archer: { col: 3, row: 3 } },
+    chest: { col: 16, row: 17 },
+    dragons: [
+      { id: 'dragon_1', label: 'Marsh Dragon', col: 13, row: 4, hp: 32, damage: 4, moveRange: 5, attackRange: 7 },
+      { id: 'dragon_2', label: 'Reed Dragon', col: 15, row: 11, hp: 30, damage: 4, moveRange: 5, attackRange: 7 },
+    ],
+  },
+  {
+    name: 'Broken Causeway',
+    terrain: [
+      '...................',
+      '...~~~~............',
+      '...~~~~......~~~...',
+      '............~~~....',
+      '.....~~~~.........~',
+      '.....~~~~.........~',
+      '...........~~~~....',
+      '..~~~......~~~~....',
+      '..~~~..............',
+      '........~~~~.......',
+      '........~~~~..~~~..',
+      '....~~~.......~~~..',
+      '....~~~............',
+      '............~~~~...',
+      '......~~~~..~~~~...',
+      '......~~~~.........',
+      '..~~~..............',
+      '..~~~.......~~~~...',
+      '...................',
+    ],
+    heroes: { hero: { col: 2, row: 16 }, wizard: { col: 1, row: 15 }, archer: { col: 3, row: 15 } },
+    chest: { col: 17, row: 1 },
+    dragons: [
+      { id: 'dragon_1', label: 'Bridge Dragon', col: 13, row: 3, hp: 34, damage: 4, moveRange: 5, attackRange: 7 },
+      { id: 'dragon_2', label: 'Causeway Dragon', col: 15, row: 9, hp: 34, damage: 4, moveRange: 5, attackRange: 7 },
+      { id: 'dragon_3', label: 'Feral Dragon', col: 10, row: 15, hp: 28, damage: 4, moveRange: 6, attackRange: 7 },
+    ],
+  },
+  {
+    name: 'Dragon Ring',
+    terrain: [
+      '........~~~........',
+      '...~~~..~~~..~~~...',
+      '...~~~.......~~~...',
+      '...................',
+      '.....~~~~.~~~~.....',
+      '.....~.......~.....',
+      '.....~.......~.....',
+      '.....~~~~.~~~~.....',
+      '...................',
+      '..~~~.........~~~..',
+      '..~~~.........~~~..',
+      '...................',
+      '.....~~~~.~~~~.....',
+      '.....~.......~.....',
+      '.....~.......~.....',
+      '.....~~~~.~~~~.....',
+      '...~~~.......~~~...',
+      '...~~~..~~~..~~~...',
+      '........~~~........',
+    ],
+    heroes: { hero: { col: 9, row: 16 }, wizard: { col: 8, row: 17 }, archer: { col: 10, row: 17 } },
+    chest: { col: 9, row: 1 },
+    dragons: [
+      { id: 'dragon_1', label: 'Ring Dragon', col: 5, row: 5, hp: 36, damage: 5, moveRange: 5, attackRange: 7 },
+      { id: 'dragon_2', label: 'Ring Dragon', col: 13, row: 5, hp: 36, damage: 5, moveRange: 5, attackRange: 7 },
+      { id: 'dragon_3', label: 'Ring Dragon', col: 5, row: 13, hp: 34, damage: 5, moveRange: 5, attackRange: 7 },
+      { id: 'dragon_4', label: 'Ring Dragon', col: 13, row: 13, hp: 34, damage: 5, moveRange: 5, attackRange: 7 },
+    ],
+  },
+  {
+    name: 'The Bad Idea',
+    terrain: [
+      '.~~~.....~~~.....~~',
+      '.....~~~.....~~~...',
+      '~~~.....~~~.....~~~',
+      '...~~~.....~~~.....',
+      '.....~~~.....~~~...',
+      '~~.....~~~.....~~~.',
+      '...~~~.....~~~.....',
+      '.....~~~.....~~~...',
+      '~~~.....~~~.....~~~',
+      '...................',
+      '~~~.....~~~.....~~~',
+      '.....~~~.....~~~...',
+      '...~~~.....~~~.....',
+      '.~~~.....~~~.....~~',
+      '.....~~~.....~~~...',
+      '~~~.....~~~.....~~~',
+      '...~~~.....~~~.....',
+      '.....~~~.....~~~...',
+      '~~.....~~~.....~~~.',
+    ],
+    heroes: { hero: { col: 9, row: 9 }, wizard: { col: 8, row: 9 }, archer: { col: 10, row: 9 } },
+    chest: { col: 18, row: 9 },
+    dragons: [
+      { id: 'dragon_1', label: 'Problem Dragon', col: 1, row: 1, hp: 40, damage: 5, moveRange: 6, attackRange: 8 },
+      { id: 'dragon_2', label: 'Problem Dragon', col: 17, row: 1, hp: 40, damage: 5, moveRange: 6, attackRange: 8 },
+      { id: 'dragon_3', label: 'Problem Dragon', col: 1, row: 17, hp: 40, damage: 5, moveRange: 6, attackRange: 8 },
+      { id: 'dragon_4', label: 'Problem Dragon', col: 17, row: 17, hp: 40, damage: 5, moveRange: 6, attackRange: 8 },
+      { id: 'dragon_5', label: 'Boss Dragon', col: 14, row: 9, hp: 54, damage: 6, moveRange: 6, attackRange: 8 },
+    ],
+  },
+];
+
 function loadImage(src) {
   const image = new Image();
   image.src = src;
@@ -118,25 +283,25 @@ function isCellInBounds(cell) {
   return cell.col >= 0 && cell.col < BOARD_SIZE && cell.row >= 0 && cell.row < BOARD_SIZE;
 }
 
-function isWaterCell(cell) {
-  return TERRAIN_MAP[cell.row]?.[cell.col] === '~';
+function isWaterCell(cell, terrainMap = TERRAIN_MAP) {
+  return terrainMap[cell.row]?.[cell.col] === '~';
 }
 
 function gridDistance(a, b) {
   return Math.max(Math.abs(a.col - b.col), Math.abs(a.row - b.row));
 }
 
-function isBlockedCell(cell, blockedKeys = new Set()) {
-  return !isCellInBounds(cell) || isWaterCell(cell) || blockedKeys.has(cellKey(cell));
+function isBlockedCell(cell, blockedKeys = new Set(), terrainMap = TERRAIN_MAP) {
+  return !isCellInBounds(cell) || isWaterCell(cell, terrainMap) || blockedKeys.has(cellKey(cell));
 }
 
-function createBoardTiles() {
+function createBoardTiles(terrainMap = TERRAIN_MAP) {
   const tiles = [];
 
   for (let row = 0; row < BOARD_SIZE; row += 1) {
     for (let col = 0; col < BOARD_SIZE; col += 1) {
       const hash = ((row + 3) * 928371 + (col + 7) * 364479) % 997;
-      const terrain = TERRAIN_MAP[row][col] === '~' ? 'water' : 'grass';
+      const terrain = terrainMap[row][col] === '~' ? 'water' : 'grass';
       tiles.push({
         row,
         col,
@@ -150,8 +315,8 @@ function createBoardTiles() {
   return tiles;
 }
 
-function findPath(from, to, blockedKeys = new Set()) {
-  if (isBlockedCell(to, blockedKeys)) {
+function findPath(from, to, blockedKeys = new Set(), terrainMap = TERRAIN_MAP) {
+  if (isBlockedCell(to, blockedKeys, terrainMap)) {
     return [];
   }
 
@@ -182,7 +347,7 @@ function findPath(from, to, blockedKeys = new Set()) {
       };
       const nextKey = cellKey(next);
 
-      if (isBlockedCell(next, blockedKeys) || visited.has(nextKey)) {
+      if (isBlockedCell(next, blockedKeys, terrainMap) || visited.has(nextKey)) {
         continue;
       }
 
@@ -208,7 +373,7 @@ function findPath(from, to, blockedKeys = new Set()) {
   return [];
 }
 
-function findReachableCells(from, maxSteps, blockedKeys = new Set()) {
+function findReachableCells(from, maxSteps, blockedKeys = new Set(), terrainMap = TERRAIN_MAP) {
   const queue = [{ cell: from, path: [] }];
   const visited = new Set([cellKey(from)]);
   const reachable = [];
@@ -237,7 +402,7 @@ function findReachableCells(from, maxSteps, blockedKeys = new Set()) {
       };
       const nextKey = cellKey(next);
 
-      if (isBlockedCell(next, blockedKeys) || visited.has(nextKey)) {
+      if (isBlockedCell(next, blockedKeys, terrainMap) || visited.has(nextKey)) {
         continue;
       }
 
@@ -256,9 +421,17 @@ function App() {
   const [currentTrack, setCurrentTrack] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
-  const [rewindCount, setRewindCount] = useState(0);
   const [restartNonce, setRestartNonce] = useState(0);
+  const [stageIndex, setStageIndex] = useState(0);
   const [battleOutcome, setBattleOutcome] = useState(null);
+  const [campaignStats, setCampaignStats] = useState({
+    stagesCleared: 0,
+    chestsOpened: 0,
+    dragonsDefeated: 0,
+    turns: 0,
+    damageDealt: 0,
+    damageTaken: 0,
+  });
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -301,21 +474,40 @@ function App() {
     setIsPlaying(true);
   }
 
-  function rewindTurnFromUi() {
-    window.rewind_turn?.();
+  function endPlayerTurnFromUi() {
+    window.end_player_turn?.();
   }
 
   function restartGame() {
     setBattleOutcome(null);
-    setRewindCount(0);
+    setStageIndex(0);
+    setCampaignStats({
+      stagesCleared: 0,
+      chestsOpened: 0,
+      dragonsDefeated: 0,
+      turns: 0,
+      damageDealt: 0,
+      damageTaken: 0,
+    });
+    setRestartNonce((nonce) => nonce + 1);
+  }
+
+  function repeatStage() {
+    setBattleOutcome(null);
+    setRestartNonce((nonce) => nonce + 1);
+  }
+
+  function nextStage() {
+    setBattleOutcome(null);
+    setStageIndex((index) => Math.min(index + 1, STAGES.length - 1));
     setRestartNonce((nonce) => nonce + 1);
   }
 
   const track = TRACKS[currentTrack];
+  const stage = STAGES[stageIndex];
 
   useEffect(() => {
     setBattleOutcome(null);
-    setRewindCount(0);
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -327,9 +519,28 @@ function App() {
     const fireballImage = loadImage('/fireball.png');
     const archerImage = loadImage('/archer.png');
     const chestImage = loadImage('/chest.png');
-    const boardTiles = createBoardTiles();
+    const boardTiles = createBoardTiles(stage.terrain);
+    const createDragon = (dragon) => ({
+      id: dragon.id,
+      label: dragon.label,
+      col: dragon.col,
+      row: dragon.row,
+      x: dragon.col,
+      y: dragon.row,
+      hp: dragon.hp,
+      maxHp: dragon.hp,
+      damage: dragon.damage,
+      moveRange: dragon.moveRange,
+      attackRange: dragon.attackRange,
+      target: null,
+      path: [],
+      moving: false,
+    });
 
     const state = {
+      stageIndex,
+      stageName: stage.name,
+      terrainMap: stage.terrain,
       canvasWidth: 960,
       canvasHeight: 960,
       boardPixels: 844,
@@ -342,16 +553,26 @@ function App() {
       round: 1,
       lastAction: 'Player turn',
       attackPulse: null,
+      tileRumbles: [],
       activeAttack: null,
       fireballs: [],
       arrows: [],
       particles: [],
       screenBlurb: null,
+      stageStats: {
+        chestsOpened: 0,
+        dragonsDefeated: 0,
+        turns: 0,
+        damageDealt: 0,
+        damageTaken: 0,
+      },
+      outcomePublished: false,
+      pendingDragonIds: [],
+      activeDragonId: null,
       selectedActor: 'hero',
       acted: { hero: false, wizard: false, archer: false },
       aggro: { hero: 0, wizard: 0, archer: 0 },
       activePathHighlight: null,
-      history: [],
       camera: {
         x: 480,
         y: 480,
@@ -363,10 +584,10 @@ function App() {
       },
       hero: {
         id: 'hero',
-        col: INITIAL_HERO_CELL.col,
-        row: INITIAL_HERO_CELL.row,
-        x: INITIAL_HERO_CELL.col,
-        y: INITIAL_HERO_CELL.row,
+        col: stage.heroes.hero.col,
+        row: stage.heroes.hero.row,
+        x: stage.heroes.hero.col,
+        y: stage.heroes.hero.row,
         hp: 24,
         maxHp: 24,
         target: null,
@@ -375,10 +596,10 @@ function App() {
       },
       wizard: {
         id: 'wizard',
-        col: INITIAL_WIZARD_CELL.col,
-        row: INITIAL_WIZARD_CELL.row,
-        x: INITIAL_WIZARD_CELL.col,
-        y: INITIAL_WIZARD_CELL.row,
+        col: stage.heroes.wizard.col,
+        row: stage.heroes.wizard.row,
+        x: stage.heroes.wizard.col,
+        y: stage.heroes.wizard.row,
         hp: 18,
         maxHp: 18,
         target: null,
@@ -387,31 +608,20 @@ function App() {
       },
       archer: {
         id: 'archer',
-        col: INITIAL_ARCHER_CELL.col,
-        row: INITIAL_ARCHER_CELL.row,
-        x: INITIAL_ARCHER_CELL.col,
-        y: INITIAL_ARCHER_CELL.row,
+        col: stage.heroes.archer.col,
+        row: stage.heroes.archer.row,
+        x: stage.heroes.archer.col,
+        y: stage.heroes.archer.row,
         hp: 20,
         maxHp: 20,
         target: null,
         path: [],
         moving: false,
       },
-      dragon: {
-        id: 'dragon',
-        col: INITIAL_DRAGON_CELL.col,
-        row: INITIAL_DRAGON_CELL.row,
-        x: INITIAL_DRAGON_CELL.col,
-        y: INITIAL_DRAGON_CELL.row,
-        hp: 30,
-        maxHp: 30,
-        target: null,
-        path: [],
-        moving: false,
-      },
+      dragons: stage.dragons.map(createDragon),
       chest: {
-        col: CHEST_CELL.col,
-        row: CHEST_CELL.row,
+        col: stage.chest.col,
+        row: stage.chest.row,
         opened: false,
         opening: false,
         elapsed: 0,
@@ -455,8 +665,16 @@ function App() {
       return actorCell(state.archer);
     }
 
-    function dragonCell() {
-      return actorCell(state.dragon);
+    function livingEnemies() {
+      return state.dragons.filter((dragon) => dragon.hp > 0);
+    }
+
+    function activeDragon() {
+      return state.dragons.find((dragon) => dragon.id === state.activeDragonId) || livingEnemies()[0] || state.dragons[0];
+    }
+
+    function dragonCell(dragon = activeDragon()) {
+      return actorCell(dragon);
     }
 
     function chestCell() {
@@ -475,7 +693,7 @@ function App() {
       if (id === 'hero') return 'Hero';
       if (id === 'wizard') return 'Wizard';
       if (id === 'archer') return 'Archer';
-      if (id === 'dragon') return 'Dragon';
+      if (id?.startsWith('dragon')) return actorById(id)?.label || 'Dragon';
       return 'Character';
     }
 
@@ -483,8 +701,13 @@ function App() {
       if (id === 'hero') return state.hero;
       if (id === 'wizard') return state.wizard;
       if (id === 'archer') return state.archer;
-      if (id === 'dragon') return state.dragon;
+      if (id === 'dragon') return activeDragon();
+      if (id?.startsWith('dragon')) return state.dragons.find((dragon) => dragon.id === id) || null;
       return null;
+    }
+
+    function isEnemy(actor) {
+      return Boolean(actor?.id?.startsWith('dragon'));
     }
 
     function moveRangeFor(actor) {
@@ -516,7 +739,7 @@ function App() {
     }
 
     function actorAtCell(cell) {
-      for (const actor of [...partyActors(), state.dragon]) {
+      for (const actor of [...partyActors(), ...state.dragons]) {
         if (actor.hp > 0 && actor.col === cell.col && actor.row === cell.row) {
           return actor;
         }
@@ -549,8 +772,12 @@ function App() {
           keys.add(cellKey(actorCell(actor)));
         }
       }
-      if (includeDragon && state.dragon.hp > 0 && actorId !== 'dragon') {
-        keys.add(cellKey(dragonCell()));
+      if (includeDragon) {
+        for (const dragon of livingEnemies()) {
+          if (dragon.id !== actorId) {
+            keys.add(cellKey(dragonCell(dragon)));
+          }
+        }
       }
       keys.add(cellKey(chestCell()));
       return keys;
@@ -579,8 +806,31 @@ function App() {
       }
       state.phase = 'victory';
       state.lastAction = 'Level cleared';
-      setScreenBlurb('LEVEL CLEARED!!!', 4.5, true);
-      setBattleOutcome('victory');
+      setScreenBlurb(stageIndex === STAGES.length - 1 ? 'CAMPAIGN CLEARED!!!' : 'LEVEL CLEARED!!!', 4.5, true);
+      if (!state.outcomePublished) {
+        state.outcomePublished = true;
+        const stageStats = {
+          stagesCleared: 1,
+          chestsOpened: state.stageStats.chestsOpened,
+          dragonsDefeated: state.dragons.filter((dragon) => dragon.hp <= 0).length,
+          turns: state.round,
+          damageDealt: state.stageStats.damageDealt,
+          damageTaken: state.stageStats.damageTaken,
+        };
+        setCampaignStats((stats) => ({
+          ...(stats.stagesCleared > stageIndex
+            ? stats
+            : {
+          stagesCleared: stats.stagesCleared + stageStats.stagesCleared,
+          chestsOpened: stats.chestsOpened + stageStats.chestsOpened,
+          dragonsDefeated: stats.dragonsDefeated + stageStats.dragonsDefeated,
+          turns: stats.turns + stageStats.turns,
+          damageDealt: stats.damageDealt + stageStats.damageDealt,
+          damageTaken: stats.damageTaken + stageStats.damageTaken,
+            }),
+        }));
+      }
+      setBattleOutcome(stageIndex === STAGES.length - 1 ? 'campaign' : 'victory');
     }
 
     function gameOver() {
@@ -638,14 +888,10 @@ function App() {
 
     function updateCameraTarget() {
       const points = [];
-      for (const actor of [state.hero, state.wizard, state.dragon]) {
+      for (const actor of [state.hero, state.wizard, state.archer, ...state.dragons]) {
         if (actor.hp > 0) {
           points.push(boardToWorld(actorScreenCell(actor)));
         }
-      }
-
-      if (state.archer.hp > 0) {
-        points.push(boardToWorld(actorScreenCell(state.archer)));
       }
 
       if (points.length === 0) {
@@ -657,17 +903,25 @@ function App() {
       const maxX = Math.max(...points.map((point) => point.x)) + padding;
       const minY = Math.min(...points.map((point) => point.y)) - padding;
       const maxY = Math.max(...points.map((point) => point.y)) + padding;
-      const focusWidth = Math.max(state.tileSize * 8, maxX - minX);
-      const focusHeight = Math.max(state.tileSize * 8, maxY - minY);
+      const rawWidth = maxX - minX;
+      const rawHeight = maxY - minY;
+      const closeness = clamp(1 - Math.max(rawWidth, rawHeight) / (state.tileSize * 20), 0, 1);
+      const intimatePadding = state.tileSize * (5.8 - closeness * 3.1);
+      const closeMinX = Math.min(...points.map((point) => point.x)) - intimatePadding;
+      const closeMaxX = Math.max(...points.map((point) => point.x)) + intimatePadding;
+      const closeMinY = Math.min(...points.map((point) => point.y)) - intimatePadding;
+      const closeMaxY = Math.max(...points.map((point) => point.y)) + intimatePadding;
+      const focusWidth = Math.max(state.tileSize * (7 - closeness * 2.4), closeMaxX - closeMinX);
+      const focusHeight = Math.max(state.tileSize * (7 - closeness * 2.4), closeMaxY - closeMinY);
       const autoScale = clamp(
         Math.min(state.canvasWidth / focusWidth, (state.canvasHeight - 56) / focusHeight),
         1,
-        2.15,
+        2.85,
       );
 
-      state.camera.targetX = (minX + maxX) / 2;
-      state.camera.targetY = (minY + maxY) / 2;
-      state.camera.targetScale = clamp(autoScale * state.camera.manualZoom, 0.62, 2.65);
+      state.camera.targetX = (closeMinX + closeMaxX) / 2;
+      state.camera.targetY = (closeMinY + closeMaxY) / 2;
+      state.camera.targetScale = clamp(autoScale * state.camera.manualZoom, 0.62, 3.05);
     }
 
     function updateCamera(dt) {
@@ -682,103 +936,41 @@ function App() {
       return livingParty().map((actor) => actor.id);
     }
 
-    function snapshotActor(actor) {
-      return {
-        col: actor.col,
-        row: actor.row,
-        x: actor.col,
-        y: actor.row,
-        hp: actor.hp,
-        target: null,
-        path: [],
-        moving: false,
-      };
-    }
-
-    function makeSnapshot(label) {
-      return {
-        label,
-        phase: state.phase,
-        round: state.round,
-        lastAction: state.lastAction,
-        selectedActor: state.selectedActor,
-        acted: { ...state.acted },
-        aggro: { ...state.aggro },
-        hero: snapshotActor(state.hero),
-        wizard: snapshotActor(state.wizard),
-        archer: snapshotActor(state.archer),
-        dragon: snapshotActor(state.dragon),
-        chest: { ...state.chest },
-      };
-    }
-
-    function pushHistory(label) {
-      state.history = [...state.history, makeSnapshot(label)].slice(-3);
-      setRewindCount(state.history.length);
-    }
-
-    function restoreActor(actor, snapshot) {
-      Object.assign(actor, snapshot, {
-        target: null,
-        path: [],
-        moving: false,
-      });
-    }
-
-    function rewindTurn() {
-      const snapshot = state.history.pop();
-      if (!snapshot) {
-        return;
-      }
-
-      state.phase = snapshot.phase;
-      state.round = snapshot.round;
-      state.lastAction = `Rewound: ${snapshot.label}`;
-      state.selectedActor = snapshot.selectedActor;
-      state.acted = { ...snapshot.acted };
-      state.aggro = { ...snapshot.aggro };
-      restoreActor(state.hero, snapshot.hero);
-      restoreActor(state.wizard, snapshot.wizard);
-      restoreActor(state.archer, snapshot.archer);
-      restoreActor(state.dragon, snapshot.dragon);
-      state.chest = { ...snapshot.chest };
-      state.aiDelay = 0;
-      state.attackPulse = null;
-      state.activeAttack = null;
-      state.fireballs = [];
-      state.arrows = [];
-      state.particles = [];
-      state.screenBlurb = null;
-      state.activePathHighlight = null;
-      state.blockedClickCell = null;
-      state.lastClickCell = null;
-      setRewindCount(state.history.length);
-      render();
-    }
-
-    window.rewind_turn = rewindTurn;
-
     function hasEveryoneActed() {
       const ids = livingActionIds();
       return ids.length === 0 || ids.every((id) => state.acted[id]);
     }
 
+    function endPlayerTurn() {
+      if (!isPartyTurn()) {
+        return;
+      }
+      for (const actor of livingParty()) {
+        state.acted[actor.id] = true;
+      }
+      state.lastAction = 'Player ends turn';
+      beginDragonTurn();
+      render();
+    }
+
+    window.end_player_turn = endPlayerTurn;
+
     function beginDragonTurn() {
       if (state.phase === 'victory' || state.phase === 'defeat') {
         return;
       }
-      pushHistory(`Round ${state.round} dragon turn`);
       state.phase = 'dragon_turn';
       state.aiDelay = 0.35;
+      state.pendingDragonIds = livingEnemies().map((dragon) => dragon.id);
+      state.activeDragonId = null;
       state.activePathHighlight = null;
-      state.lastAction = 'Dragon turn';
+      state.lastAction = 'Dragons turn';
     }
 
     function beginPlayerTurn() {
       if (state.phase === 'victory' || state.phase === 'defeat') {
         return;
       }
-      pushHistory(`Round ${state.round + 1} player turn`);
       state.phase = 'player_turn';
       state.round += 1;
       state.acted = {
@@ -808,48 +1000,48 @@ function App() {
       }
     }
 
-    function startHeroAttack() {
+    function startHeroAttack(targetEnemy) {
       state.phase = 'hero_attacking';
       state.activeAttack = {
         actor: 'hero',
-        target: 'dragon',
+        target: targetEnemy.id,
         elapsed: 0,
         duration: HERO_ATTACK_FRAMES / HERO_ATTACK_FPS,
         damage: HERO_ATTACK_DAMAGE,
         applied: false,
       };
       state.lastAction = 'Hero attacks';
-      state.lastClickCell = dragonCell();
+      state.lastClickCell = dragonCell(targetEnemy);
       state.blockedClickCell = null;
     }
 
-    function startWizardAttack() {
+    function startWizardAttack(targetEnemy) {
       state.phase = 'wizard_casting';
       state.activeAttack = {
         actor: 'wizard',
-        target: 'dragon',
+        target: targetEnemy.id,
         elapsed: 0,
         duration: WIZARD_CAST_FRAMES / WIZARD_CAST_FPS,
         damage: WIZARD_ATTACK_DAMAGE,
         applied: false,
       };
       state.lastAction = 'Wizard casts';
-      state.lastClickCell = dragonCell();
+      state.lastClickCell = dragonCell(targetEnemy);
       state.blockedClickCell = null;
     }
 
-    function startArcherAttack() {
+    function startArcherAttack(targetEnemy) {
       state.phase = 'archer_attacking';
       state.activeAttack = {
         actor: 'archer',
-        target: 'dragon',
+        target: targetEnemy.id,
         elapsed: 0,
         duration: ARCHER_ATTACK_FRAMES / ARCHER_ATTACK_FPS,
         damage: ARCHER_ATTACK_DAMAGE,
         applied: false,
       };
       state.lastAction = 'Archer fires';
-      state.lastClickCell = dragonCell();
+      state.lastClickCell = dragonCell(targetEnemy);
       state.blockedClickCell = null;
     }
 
@@ -870,15 +1062,20 @@ function App() {
         duration: 0.62,
         damage,
       });
-      state.phase = `${owner}_fireball_flying`;
+      state.phase = 'fireball_flying';
       state.activeAttack = null;
       state.lastAction = `${actorLabel(owner)} fireball flies`;
     }
 
     function launchArrow() {
+      const targetEnemy = actorById(state.activeAttack.target);
+      if (!targetEnemy) {
+        return;
+      }
       const start = boardToWorld(actorScreenCell(state.archer));
-      const end = boardToWorld(actorScreenCell(state.dragon));
+      const end = boardToWorld(actorScreenCell(targetEnemy));
       state.arrows.push({
+        target: targetEnemy.id,
         start,
         end,
         elapsed: 0,
@@ -890,17 +1087,18 @@ function App() {
       state.lastAction = 'Arrow flies';
     }
 
-    function startDragonAttack(targetId) {
+    function startDragonAttack(dragon, targetId) {
       state.phase = 'dragon_attacking';
+      state.activeDragonId = dragon.id;
       state.activeAttack = {
-        actor: 'dragon',
+        actor: dragon.id,
         target: targetId,
         elapsed: 0,
         duration: DRAGON_ATTACK_FRAMES / DRAGON_ATTACK_FPS,
-        damage: DRAGON_ATTACK_DAMAGE,
+        damage: dragon.damage,
         applied: false,
       };
-      state.lastAction = 'Dragon attacks';
+      state.lastAction = `${actorLabel(dragon.id)} attacks`;
     }
 
     function spawnSparks(cell, color) {
@@ -922,6 +1120,26 @@ function App() {
       }
     }
 
+    function rumbleTiles(centerCell) {
+      const cells = [];
+      for (let row = centerCell.row - 1; row <= centerCell.row + 1; row += 1) {
+        for (let col = centerCell.col - 1; col <= centerCell.col + 1; col += 1) {
+          const cell = { col, row };
+          if (!isCellInBounds(cell)) {
+            continue;
+          }
+          const distance = gridDistance(centerCell, cell);
+          cells.push({
+            cell,
+            time: distance === 0 ? 0.5 : 0.34,
+            maxTime: distance === 0 ? 0.5 : 0.34,
+            strength: distance === 0 ? 0.34 : 0.13,
+          });
+        }
+      }
+      state.tileRumbles.push(...cells);
+    }
+
     function applyAttackDamage() {
       if (!state.activeAttack || state.activeAttack.applied) {
         return;
@@ -929,18 +1147,23 @@ function App() {
 
       state.activeAttack.applied = true;
 
-      if (state.activeAttack.target === 'dragon') {
-        state.dragon.hp = Math.max(0, state.dragon.hp - state.activeAttack.damage);
+      const enemyTarget = actorById(state.activeAttack.target);
+      if (isEnemy(enemyTarget)) {
+        enemyTarget.hp = Math.max(0, enemyTarget.hp - state.activeAttack.damage);
+        state.stageStats.damageDealt += state.activeAttack.damage;
         state.aggro[state.activeAttack.actor] =
           (state.aggro[state.activeAttack.actor] || 0) + state.activeAttack.damage + 2;
-        state.attackPulse = { cell: dragonCell(), time: 0.35, color: 'rgba(255, 235, 116, 0.82)' };
-        spawnSparks(dragonCell(), '#ffe45f');
-        state.lastAction = `${actorLabel(state.activeAttack.actor)} hits dragon`;
+        state.attackPulse = { cell: dragonCell(enemyTarget), time: 0.35, color: 'rgba(255, 235, 116, 0.82)' };
+        rumbleTiles(dragonCell(enemyTarget));
+        spawnSparks(dragonCell(enemyTarget), '#ffe45f');
+        state.lastAction = `${actorLabel(state.activeAttack.actor)} hits ${actorLabel(enemyTarget.id)}`;
       } else {
         const target = actorById(state.activeAttack.target);
         if (!target) return;
         target.hp = Math.max(0, target.hp - state.activeAttack.damage);
+        state.stageStats.damageTaken += state.activeAttack.damage;
         state.attackPulse = { cell: actorCell(target), time: 0.35, color: 'rgba(255, 97, 86, 0.86)' };
+        rumbleTiles(actorCell(target));
         spawnSparks(actorCell(target), '#ff3d2e');
         state.lastAction = `Dragon hits ${actorLabel(state.activeAttack.target)}`;
       }
@@ -954,7 +1177,7 @@ function App() {
       const actor = state.activeAttack.actor;
       state.activeAttack = null;
 
-      if (state.dragon.hp <= 0) {
+      if (livingEnemies().length === 0) {
         completeLevel();
         return;
       }
@@ -968,8 +1191,8 @@ function App() {
         finishPlayerActorAction('hero');
       } else if (actor === 'archer') {
         finishPlayerActorAction('archer');
-      } else if (actor === 'dragon') {
-        beginPlayerTurn();
+      } else if (actor?.startsWith('dragon')) {
+        finishDragonAction();
       }
     }
 
@@ -978,11 +1201,11 @@ function App() {
         return { valid: false, path: [], label: 'No actor' };
       }
 
-      if (isWaterCell(cell)) {
+      if (isWaterCell(cell, state.terrainMap)) {
         return { valid: false, path: [], label: 'Water blocks movement' };
       }
 
-      const path = findPath(actorCell(actor), cell, occupiedKeysFor(actor.id, true));
+      const path = findPath(actorCell(actor), cell, occupiedKeysFor(actor.id, true), state.terrainMap);
       const sameCell = cellKey(actorCell(actor)) === cellKey(cell);
       const range = moveRangeFor(actor);
 
@@ -1008,10 +1231,10 @@ function App() {
       }
 
       const occupant = actorAtCell(cell);
-      if (occupant?.id === 'dragon') {
+      if (isEnemy(occupant)) {
         const range = attackRangeFor(actor);
-        const valid = gridDistance(actorCell(actor), dragonCell()) <= range;
-        return { type: 'attack', valid, path: [dragonCell()], label: valid ? 'Attack in range' : 'Attack out of range' };
+        const valid = gridDistance(actorCell(actor), dragonCell(occupant)) <= range;
+        return { type: 'attack', valid, path: [dragonCell(occupant)], label: valid ? 'Attack in range' : 'Attack out of range' };
       }
 
       if (occupant && occupant.id !== actor.id) {
@@ -1020,7 +1243,7 @@ function App() {
 
       if (!state.chest.opened && isChestCell(cell)) {
         const valid =
-          state.dragon.hp > 0 &&
+          livingEnemies().length > 0 &&
           livingParty().length > 0 &&
           gridDistance(actorCell(actor), chestCell()) <= CHEST_OPEN_RANGE;
         return { type: 'open_chest', valid, path: [chestCell()], label: valid ? 'Open chest' : 'Chest out of range' };
@@ -1048,24 +1271,24 @@ function App() {
         return;
       }
 
-      if (occupant?.id === 'dragon') {
+      if (isEnemy(occupant)) {
         const range = attackRangeFor(actor);
-        if (gridDistance(actorCell(actor), dragonCell()) > range) {
+        if (gridDistance(actorCell(actor), dragonCell(occupant)) > range) {
           setBlockedClick(cell, 'Attack out of range');
           return;
         }
         if (actor.id === 'wizard') {
-          startWizardAttack();
+          startWizardAttack(occupant);
         } else if (actor.id === 'archer') {
-          startArcherAttack();
+          startArcherAttack(occupant);
         } else {
-          startHeroAttack();
+          startHeroAttack(occupant);
         }
         return;
       }
 
       if (!state.chest.opened && isChestCell(cell)) {
-        if (state.dragon.hp <= 0 || livingParty().length === 0) {
+        if (livingEnemies().length === 0 || livingParty().length === 0) {
           setBlockedClick(cell, 'Chest is locked after battle');
           return;
         }
@@ -1079,6 +1302,7 @@ function App() {
         state.chest.elapsed = 0;
         state.chest.bonusRound = state.round;
         state.chest.opener = actor.id;
+        state.stageStats.chestsOpened = 1;
         setScreenBlurb('CHEST OPENED!', 1.35);
         state.lastClickCell = chestCell();
         state.blockedClickCell = null;
@@ -1108,7 +1332,7 @@ function App() {
       }
     }
 
-    function chooseDragonTarget() {
+    function chooseDragonTarget(dragon) {
       const targets = livingParty();
       if (targets.length === 0) {
         return null;
@@ -1117,7 +1341,7 @@ function App() {
       return targets
         .map((actor) => ({
           actor,
-          distance: gridDistance(dragonCell(), actorCell(actor)),
+          distance: gridDistance(dragonCell(dragon), actorCell(actor)),
           aggro: state.aggro[actor.id] || 0,
           hpRatio: actor.hp / actor.maxHp,
         }))
@@ -1128,10 +1352,15 @@ function App() {
         })[0];
     }
 
-    function chooseDragonMove(target) {
+    function chooseDragonMove(dragon, target) {
       const blocked = new Set(livingParty().map((actor) => cellKey(actorCell(actor))));
+      for (const other of livingEnemies()) {
+        if (other.id !== dragon.id) {
+          blocked.add(cellKey(dragonCell(other)));
+        }
+      }
       blocked.add(cellKey(chestCell()));
-      const options = findReachableCells(dragonCell(), DRAGON_MOVE_RANGE, blocked);
+      const options = findReachableCells(dragonCell(dragon), dragon.moveRange, blocked, state.terrainMap);
       let best = null;
 
       for (const option of options) {
@@ -1145,31 +1374,50 @@ function App() {
       return best;
     }
 
+    function finishDragonAction() {
+      state.activeDragonId = null;
+      state.pendingDragonIds = state.pendingDragonIds.filter((id) => actorById(id)?.hp > 0);
+      if (state.pendingDragonIds.length > 0 && livingParty().length > 0) {
+        state.phase = 'dragon_turn';
+        state.aiDelay = 0.24;
+      } else {
+        beginPlayerTurn();
+      }
+    }
+
     function dragonAct() {
-      const target = chooseDragonTarget();
+      const dragonId = state.pendingDragonIds.shift();
+      const dragon = actorById(dragonId);
+      if (!dragon || dragon.hp <= 0) {
+        finishDragonAction();
+        return;
+      }
+
+      state.activeDragonId = dragon.id;
+      const target = chooseDragonTarget(dragon);
       if (!target) {
         gameOver();
         return;
       }
 
-      if (target.distance <= DRAGON_ATTACK_RANGE) {
-        startDragonAttack(target.actor.id);
+      if (target.distance <= dragon.attackRange) {
+        startDragonAttack(dragon, target.actor.id);
         return;
       }
 
-      const move = chooseDragonMove(target.actor);
+      const move = chooseDragonMove(dragon, target.actor);
       if (!move || move.path.length === 0) {
-        state.lastAction = 'Dragon waits';
-        beginPlayerTurn();
+        state.lastAction = `${actorLabel(dragon.id)} waits`;
+        finishDragonAction();
         return;
       }
 
-      state.dragon.path = move.path;
-      state.dragon.target = move.path[0];
-      state.dragon.moving = true;
+      dragon.path = move.path;
+      dragon.target = move.path[0];
+      dragon.moving = true;
       state.activePathHighlight = { path: move.path, valid: false };
       state.phase = 'dragon_moving';
-      state.lastAction = `Dragon moves ${move.path.length}`;
+      state.lastAction = `${actorLabel(dragon.id)} moves ${move.path.length}`;
     }
 
     function onPointerMove(event) {
@@ -1259,26 +1507,30 @@ function App() {
 
         target.hp = Math.max(0, target.hp - hit.damage);
 
-        if (hit.target === 'dragon') {
+        if (isEnemy(target)) {
+          state.stageStats.damageDealt += hit.damage;
           state.aggro[hit.owner] = (state.aggro[hit.owner] || 0) + hit.damage + 1;
-          state.attackPulse = { cell: dragonCell(), time: 0.35, color: 'rgba(255, 174, 56, 0.9)' };
-          spawnSparks(dragonCell(), '#ffd84d');
-          state.lastAction = `${actorLabel(hit.owner)} hits dragon for ${hit.damage}`;
+          state.attackPulse = { cell: dragonCell(target), time: 0.35, color: 'rgba(255, 174, 56, 0.9)' };
+          rumbleTiles(dragonCell(target));
+          spawnSparks(dragonCell(target), '#ffd84d');
+          state.lastAction = `${actorLabel(hit.owner)} hits ${actorLabel(target.id)} for ${hit.damage}`;
 
-          if (state.dragon.hp <= 0) {
+          if (livingEnemies().length === 0) {
             completeLevel();
           } else {
             finishPlayerActorAction(hit.owner);
           }
         } else {
+          state.stageStats.damageTaken += hit.damage;
           state.attackPulse = { cell: actorCell(target), time: 0.35, color: 'rgba(255, 97, 86, 0.86)' };
+          rumbleTiles(actorCell(target));
           spawnSparks(actorCell(target), '#ff3d2e');
           state.lastAction = `Dragon fireball hits ${actorLabel(hit.target)}`;
 
           if (livingParty().length === 0) {
             gameOver();
           } else {
-            beginPlayerTurn();
+            finishDragonAction();
           }
         }
       }
@@ -1293,13 +1545,19 @@ function App() {
       state.arrows = state.arrows.filter((arrow) => arrow.elapsed < arrow.duration);
 
       for (const hit of hits) {
-        state.dragon.hp = Math.max(0, state.dragon.hp - hit.damage);
+        const target = actorById(hit.target);
+        if (!target || target.hp <= 0) {
+          continue;
+        }
+        target.hp = Math.max(0, target.hp - hit.damage);
+        state.stageStats.damageDealt += hit.damage;
         state.aggro.archer = (state.aggro.archer || 0) + hit.damage + 1;
-        state.attackPulse = { cell: dragonCell(), time: 0.35, color: 'rgba(255, 235, 116, 0.84)' };
-        spawnSparks(dragonCell(), '#ffe45f');
-        state.lastAction = `Archer hits dragon for ${hit.damage}`;
+        state.attackPulse = { cell: dragonCell(target), time: 0.35, color: 'rgba(255, 235, 116, 0.84)' };
+        rumbleTiles(dragonCell(target));
+        spawnSparks(dragonCell(target), '#ffe45f');
+        state.lastAction = `Archer hits ${actorLabel(target.id)} for ${hit.damage}`;
 
-        if (state.dragon.hp <= 0) {
+        if (livingEnemies().length === 0) {
           completeLevel();
         } else {
           finishPlayerActorAction('archer');
@@ -1317,10 +1575,18 @@ function App() {
       state.particles = state.particles.filter((particle) => particle.life > 0);
     }
 
+    function updateTileRumbles(dt) {
+      for (const rumble of state.tileRumbles) {
+        rumble.time -= dt;
+      }
+      state.tileRumbles = state.tileRumbles.filter((rumble) => rumble.time > 0);
+    }
+
     function update(dt) {
       state.time += dt;
       updateCamera(dt);
       updateParticles(dt);
+      updateTileRumbles(dt);
 
       if (state.screenBlurb) {
         state.screenBlurb.elapsed += dt;
@@ -1351,19 +1617,21 @@ function App() {
         state.activeAttack.elapsed += dt;
         if (state.activeAttack.elapsed >= state.activeAttack.duration) {
           const targetId = state.activeAttack.target;
-          launchFireball('dragon', targetId, DRAGON_ATTACK_DAMAGE);
+          const dragon = actorById(state.activeAttack.actor);
+          if (!dragon) return;
+          launchFireball(dragon.id, targetId, dragon.damage);
         }
       } else if (state.phase === 'wizard_casting') {
         state.activeAttack.elapsed += dt;
         if (state.activeAttack.elapsed >= state.activeAttack.duration) {
-          launchFireball('wizard', 'dragon', WIZARD_ATTACK_DAMAGE);
+          launchFireball('wizard', state.activeAttack.target, WIZARD_ATTACK_DAMAGE);
         }
       } else if (state.phase === 'archer_attacking') {
         state.activeAttack.elapsed += dt;
         if (state.activeAttack.elapsed >= state.activeAttack.duration) {
           launchArrow();
         }
-      } else if (state.phase === 'wizard_fireball_flying' || state.phase === 'dragon_fireball_flying') {
+      } else if (state.phase === 'fireball_flying') {
         updateFireballs(dt);
       } else if (state.phase === 'arrow_flying') {
         updateArrows(dt);
@@ -1388,10 +1656,11 @@ function App() {
           dragonAct();
         }
       } else if (state.phase === 'dragon_moving') {
-        const finished = updateMover(state.dragon, dt, DRAGON_MOVE_SPEED);
+        const dragon = activeDragon();
+        const finished = updateMover(dragon, dt, DRAGON_MOVE_SPEED);
         if (finished) {
           state.activePathHighlight = null;
-          beginPlayerTurn();
+          finishDragonAction();
         }
       } else if (state.phase === 'chest_opening') {
         state.chest.elapsed += dt;
@@ -1412,6 +1681,24 @@ function App() {
       }
     }
 
+    function tileRumbleOffset(cell) {
+      let x = 0;
+      let y = 0;
+
+      for (const rumble of state.tileRumbles) {
+        if (rumble.cell.col !== cell.col || rumble.cell.row !== cell.row) {
+          continue;
+        }
+        const decay = clamp(rumble.time / rumble.maxTime, 0, 1);
+        const amplitude = state.tileSize * rumble.strength * decay;
+        const phase = state.time * 92 + cell.col * 11.7 + cell.row * 17.3;
+        x += Math.sin(phase) * amplitude;
+        y += Math.cos(phase * 1.27) * amplitude * 0.72;
+      }
+
+      return { x, y };
+    }
+
     function drawTerrainTile(tile, lifted = false) {
       const isWater = tile.terrain === 'water';
       const image = isWater ? waterImage : grassImage;
@@ -1421,8 +1708,9 @@ function App() {
       const frame = Math.floor(state.time * tile.fps + tile.offset) % frameCount;
       const sourceX = (frame % columns) * frameSize;
       const sourceY = Math.floor(frame / columns) * frameSize;
-      const destX = state.boardOffsetX + tile.col * state.tileSize;
-      const destY = state.boardOffsetY + tile.row * state.tileSize;
+      const rumble = tileRumbleOffset(tile);
+      const destX = state.boardOffsetX + tile.col * state.tileSize + rumble.x;
+      const destY = state.boardOffsetY + tile.row * state.tileSize + rumble.y;
       const lift = lifted ? state.tileSize * 0.34 : 0;
       const pulse = lifted ? Math.sin(state.time * 10) * 0.035 : 0;
       const scale = lifted ? 1.36 + pulse : 1;
@@ -1470,8 +1758,9 @@ function App() {
       const pulse = lifted ? Math.sin(state.time * 10) * 0.035 : 0;
       const scale = lifted ? 1.36 + pulse : 1;
       const size = state.tileSize * scale;
-      const x = state.boardOffsetX + cell.col * state.tileSize - (size - state.tileSize) / 2;
-      const y = state.boardOffsetY + cell.row * state.tileSize - lift - (size - state.tileSize) / 2;
+      const rumble = tileRumbleOffset(cell);
+      const x = state.boardOffsetX + cell.col * state.tileSize - (size - state.tileSize) / 2 + rumble.x;
+      const y = state.boardOffsetY + cell.row * state.tileSize - lift - (size - state.tileSize) / 2 + rumble.y;
       return { x, y, size };
     }
 
@@ -1536,7 +1825,7 @@ function App() {
         const actor = selectedActor();
         if (actor && !state.acted[actor.id]) {
           const range = moveRangeFor(actor);
-          for (const option of findReachableCells(actorCell(actor), range, occupiedKeysFor(actor.id, true))) {
+          for (const option of findReachableCells(actorCell(actor), range, occupiedKeysFor(actor.id, true), state.terrainMap)) {
             drawCellHighlight(option.cell, 'rgba(189, 231, 122, 0.08)', null);
           }
         }
@@ -1564,8 +1853,9 @@ function App() {
       }
 
       drawActorCellOutline(selectedActor(), 'rgba(120, 218, 255, 0.82)');
-      if (state.hoverCell && state.dragon.hp > 0 && cellKey(state.hoverCell) === cellKey(dragonCell())) {
-        drawActorCellOutline(state.dragon, 'rgba(255, 232, 96, 0.95)');
+      const hoveredEnemy = state.hoverCell ? actorAtCell(state.hoverCell) : null;
+      if (isEnemy(hoveredEnemy)) {
+        drawActorCellOutline(hoveredEnemy, 'rgba(255, 232, 96, 0.95)');
       }
       if (!state.chest.opened) {
         drawCellHighlight(chestCell(), null, 'rgba(255, 216, 96, 0.58)', 4);
@@ -1674,23 +1964,23 @@ function App() {
       });
     }
 
-    function drawDragon() {
-      if (state.dragon.hp <= 0) {
+    function drawDragon(dragon) {
+      if (dragon.hp <= 0) {
         return;
       }
-      const dragonCenterX = cellCenter(state.dragon.x, state.tileSize, state.boardOffsetX);
-      const dragonFeetY = state.boardOffsetY + (state.dragon.y + 1.02) * state.tileSize;
+      const dragonCenterX = cellCenter(dragon.x, state.tileSize, state.boardOffsetX);
+      const dragonFeetY = state.boardOffsetY + (dragon.y + 1.02) * state.tileSize;
       const drawHeight = state.tileSize * 2.75;
       const drawWidth = drawHeight;
-      const bob = state.dragon.moving ? Math.sin(state.time * 12) * 1.4 : 0;
+      const bob = dragon.moving ? Math.sin(state.time * 12) * 1.4 : 0;
       const attackFrame =
-        state.activeAttack?.actor === 'dragon'
+        state.activeAttack?.actor === dragon.id
           ? Math.min(DRAGON_ATTACK_FRAMES - 1, Math.floor(state.activeAttack.elapsed * DRAGON_ATTACK_FPS))
           : 0;
       const sourceX = (attackFrame % DRAGON_ATTACK_COLUMNS) * DRAGON_FRAME_SIZE;
       const sourceY = Math.floor(attackFrame / DRAGON_ATTACK_COLUMNS) * DRAGON_FRAME_SIZE;
 
-      withLowHealthFlash(state.dragon, () => {
+      withLowHealthFlash(dragon, () => {
         ctx.shadowColor = 'rgba(0, 0, 0, 0.46)';
         ctx.shadowBlur = 12;
         ctx.shadowOffsetY = 9;
@@ -1885,35 +2175,27 @@ function App() {
       };
     }
 
-    function drawFocusVignette() {
-      const amount = clamp((state.camera.scale - FOCUS_VIGNETTE_MIN_SCALE) / 0.75, 0, 1);
+    function drawCameraEdgeFog() {
+      const amount = clamp((state.camera.scale - EDGE_FOG_MIN_SCALE) / 0.75, 0, 1);
       if (amount <= 0) {
         return;
       }
 
-      const focusActors = [...livingParty(), state.dragon].filter((actor) => actor.hp > 0);
-      if (focusActors.length === 0) {
-        return;
-      }
-
+      const radius = Math.max(state.canvasWidth, state.canvasHeight) * (0.47 - amount * 0.08);
+      const gradient = ctx.createRadialGradient(
+        state.canvasWidth / 2,
+        state.canvasHeight / 2,
+        radius * 0.5,
+        state.canvasWidth / 2,
+        state.canvasHeight / 2,
+        Math.max(state.canvasWidth, state.canvasHeight) * 0.72,
+      );
+      gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      gradient.addColorStop(0.58, `rgba(3, 7, 5, ${0.08 * amount})`);
+      gradient.addColorStop(1, `rgba(3, 7, 5, ${0.5 * amount})`);
       ctx.save();
-      ctx.fillStyle = `rgba(4, 8, 5, ${0.18 + amount * 0.36})`;
+      ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, state.canvasWidth, state.canvasHeight);
-      ctx.globalCompositeOperation = 'destination-out';
-
-      for (const actor of focusActors) {
-        const point = worldToScreen(boardToWorld(actorScreenCell(actor)));
-        const radius = state.tileSize * state.camera.scale * (actor.id === 'dragon' ? 3.25 : 2.55);
-        const gradient = ctx.createRadialGradient(point.x, point.y, radius * 0.24, point.x, point.y, radius);
-        gradient.addColorStop(0, 'rgba(0, 0, 0, 0.95)');
-        gradient.addColorStop(0.56, 'rgba(0, 0, 0, 0.72)');
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
       ctx.restore();
     }
 
@@ -1923,9 +2205,9 @@ function App() {
       }
 
       const progress = clamp(state.screenBlurb.elapsed / state.screenBlurb.duration, 0, 1);
-      const alpha = progress < 0.72 ? 1 : 1 - (progress - 0.72) / 0.28;
+      const alpha = state.screenBlurb.persist ? 1 : progress < 0.72 ? 1 : 1 - (progress - 0.72) / 0.28;
       const y = state.canvasHeight * 0.2 - Math.sin(progress * Math.PI) * 12;
-      const scale = 1 + Math.sin(progress * Math.PI) * 0.08;
+      const scale = 1 + Math.sin(state.screenBlurb.elapsed * 4.5) * (state.screenBlurb.persist ? 0.025 : 0.08);
       const width = Math.min(360, state.canvasWidth - 80);
       const height = 54;
       const x = state.canvasWidth / 2 - width / 2;
@@ -2012,14 +2294,12 @@ function App() {
           ? 'Player Turn'
           : state.phase === 'hero_attacking'
             ? 'Hero Attack'
-            : state.phase === 'wizard_casting' || state.phase === 'wizard_fireball_flying'
+            : state.phase === 'wizard_casting' || state.phase === 'fireball_flying'
               ? 'Wizard Attack'
               : state.phase === 'archer_attacking' || state.phase === 'arrow_flying'
                 ? 'Archer Attack'
               : state.phase === 'dragon_attacking'
                 ? 'Dragon Attack'
-                : state.phase === 'dragon_fireball_flying'
-                  ? 'Dragon Fireball'
                 : state.phase === 'dragon_turn' || state.phase === 'dragon_moving'
                   ? 'Dragon Turn'
                   : state.phase === 'chest_opening'
@@ -2113,12 +2393,12 @@ function App() {
 
       drawChest();
 
-      const actors = [state.hero, state.wizard, state.archer, state.dragon].sort((a, b) => a.y - b.y);
+      const actors = [state.hero, state.wizard, state.archer, ...state.dragons].sort((a, b) => a.y - b.y);
       for (const actor of actors) {
         if (actor.id === 'hero') drawHero();
         if (actor.id === 'wizard') drawWizard();
         if (actor.id === 'archer') drawArcher();
-        if (actor.id === 'dragon') drawDragon();
+        if (isEnemy(actor)) drawDragon(actor);
       }
       drawFireballs();
       drawArrows();
@@ -2128,7 +2408,7 @@ function App() {
       }
 
       ctx.restore();
-      drawFocusVignette();
+      drawCameraEdgeFog();
       drawScreenBlurb();
       drawChestIndicator();
       drawHud();
@@ -2149,7 +2429,9 @@ function App() {
       return JSON.stringify({
         coordinate_system: '19x19 board, origin at top-left, col increases right, row increases down',
         board: { columns: BOARD_SIZE, rows: BOARD_SIZE },
+        stage: { number: state.stageIndex + 1, name: state.stageName, total: STAGES.length },
         phase: state.phase,
+        battle_outcome: state.phase === 'victory' ? 'victory' : state.phase === 'defeat' ? 'defeat' : null,
         round: state.round,
         selected_actor: state.selectedActor,
         acted: state.acted,
@@ -2175,6 +2457,7 @@ function App() {
         active_attack: state.activeAttack,
         fireballs: state.fireballs.length,
         arrows: state.arrows.length,
+        stage_stats: state.stageStats,
         chest: {
           col: state.chest.col,
           row: state.chest.row,
@@ -2210,16 +2493,20 @@ function App() {
           moving: state.archer.moving,
           queued_steps: state.archer.path.length,
         },
-        dragon: {
-          col: Number(state.dragon.x.toFixed(2)),
-          row: Number(state.dragon.y.toFixed(2)),
-          cell_col: state.dragon.col,
-          cell_row: state.dragon.row,
-          hp: state.dragon.hp,
-          moving: state.dragon.moving,
-          queued_steps: state.dragon.path.length,
+        dragons: state.dragons.map((dragon) => ({
+          id: dragon.id,
+          label: dragon.label,
+          col: Number(dragon.x.toFixed(2)),
+          row: Number(dragon.y.toFixed(2)),
+          cell_col: dragon.col,
+          cell_row: dragon.row,
+          hp: dragon.hp,
+          max_hp: dragon.maxHp,
+          damage: dragon.damage,
+          moving: dragon.moving,
+          queued_steps: dragon.path.length,
           blocks_party: true,
-        },
+        })),
         hover_cell: state.hoverCell,
         selected_cell: state.lastClickCell,
         blocked_click_cell: state.blockedClickCell,
@@ -2297,8 +2584,9 @@ function App() {
       delete window.render_game_to_text;
       delete window.advanceTime;
       delete window.rewind_turn;
+      delete window.end_player_turn;
     };
-  }, []);
+  }, [restartNonce]);
 
   return (
     <main>
@@ -2320,8 +2608,15 @@ function App() {
             onEnded={onTrackEnded}
           />
           <div className="player-screen">
-            <span className="track-label">Track {currentTrack + 1}/{TRACKS.length}</span>
+            <span className="track-label">
+              Stage {stageIndex + 1}/{STAGES.length} · {stage.name} · Track {currentTrack + 1}/{TRACKS.length}
+            </span>
             <strong>{track.title}</strong>
+            {battleOutcome && (
+              <span className="outcome-label">
+                {battleOutcome === 'campaign' ? 'CAMPAIGN CLEARED' : battleOutcome === 'victory' ? 'LEVEL CLEARED' : 'GAME OVER'}
+              </span>
+            )}
           </div>
           <div className="player-buttons">
             <button type="button" onClick={playPauseMusic}>
@@ -2333,6 +2628,29 @@ function App() {
             <button type="button" onClick={rewindTurnFromUi} disabled={rewindCount === 0}>
               Rewind {rewindCount}
             </button>
+            <button type="button" onClick={endPlayerTurnFromUi} disabled={battleOutcome !== null}>
+              End Turn
+            </button>
+            {battleOutcome === 'victory' && (
+              <button type="button" onClick={repeatStage}>
+                Repeat
+              </button>
+            )}
+            {battleOutcome === 'victory' && stageIndex < STAGES.length - 1 && (
+              <button type="button" onClick={nextStage}>
+                Next
+              </button>
+            )}
+            {battleOutcome === 'campaign' && (
+              <button type="button" onClick={repeatStage}>
+                Repeat
+              </button>
+            )}
+            {battleOutcome && (
+              <button type="button" onClick={restartGame}>
+                Restart
+              </button>
+            )}
           </div>
           <label className="volume-control">
             <span>Volume {Math.round(volume * 100)}%</span>
@@ -2345,6 +2663,17 @@ function App() {
             />
           </label>
         </aside>
+        {battleOutcome === 'campaign' && (
+          <section className="reward-screen" aria-label="Campaign reward">
+            <strong>Good job. You cleared the whole campaign.</strong>
+            <span>Stages cleared: {campaignStats.stagesCleared}/{STAGES.length}</span>
+            <span>Dragons defeated: {campaignStats.dragonsDefeated}</span>
+            <span>Bonus chests opened: {campaignStats.chestsOpened}</span>
+            <span>Total turns: {campaignStats.turns}</span>
+            <span>Damage dealt: {campaignStats.damageDealt} · Damage taken: {campaignStats.damageTaken}</span>
+            <a href="https://zachbohl.com" target="_blank" rel="noreferrer">zachbohl.com</a>
+          </section>
+        )}
       </section>
     </main>
   );

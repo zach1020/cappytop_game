@@ -126,7 +126,7 @@ const STAGES = [
       '..............~~~..',
       '...................',
     ],
-    heroes: { hero: { col: 3, row: 9 }, wizard: { col: 2, row: 10 }, archer: { col: 4, row: 10 } },
+    heroes: { hero: { col: 3, row: 10 }, wizard: { col: 2, row: 10 }, archer: { col: 4, row: 10 } },
     chest: { col: 17, row: 2 },
     dragons: [
       { id: 'dragon_1', label: 'North Dragon', col: 14, row: 5, hp: 28, damage: 3, moveRange: 5, attackRange: 5 },
@@ -156,11 +156,11 @@ const STAGES = [
       '......~~~..........',
       '...................',
     ],
-    heroes: { hero: { col: 2, row: 2 }, wizard: { col: 1, row: 3 }, archer: { col: 3, row: 3 } },
+    heroes: { hero: { col: 1, row: 2 }, wizard: { col: 1, row: 3 }, archer: { col: 5, row: 3 } },
     chest: { col: 16, row: 17 },
     dragons: [
       { id: 'dragon_1', label: 'Marsh Dragon', col: 13, row: 4, hp: 32, damage: 4, moveRange: 5, attackRange: 5 },
-      { id: 'dragon_2', label: 'Reed Dragon', col: 15, row: 11, hp: 30, damage: 4, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_2', label: 'Reed Dragon', col: 15, row: 10, hp: 30, damage: 4, moveRange: 5, attackRange: 5 },
     ],
   },
   {
@@ -186,10 +186,10 @@ const STAGES = [
       '..~~~.......~~~~...',
       '...................',
     ],
-    heroes: { hero: { col: 2, row: 16 }, wizard: { col: 1, row: 15 }, archer: { col: 3, row: 15 } },
+    heroes: { hero: { col: 1, row: 16 }, wizard: { col: 1, row: 15 }, archer: { col: 3, row: 15 } },
     chest: { col: 17, row: 1 },
     dragons: [
-      { id: 'dragon_1', label: 'Bridge Dragon', col: 13, row: 3, hp: 34, damage: 4, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_1', label: 'Bridge Dragon', col: 15, row: 3, hp: 34, damage: 4, moveRange: 5, attackRange: 5 },
       { id: 'dragon_2', label: 'Causeway Dragon', col: 15, row: 9, hp: 34, damage: 4, moveRange: 5, attackRange: 5 },
       { id: 'dragon_3', label: 'Feral Dragon', col: 10, row: 15, hp: 28, damage: 4, moveRange: 6, attackRange: 5 },
     ],
@@ -217,13 +217,13 @@ const STAGES = [
       '...~~~..~~~..~~~...',
       '........~~~........',
     ],
-    heroes: { hero: { col: 9, row: 16 }, wizard: { col: 8, row: 17 }, archer: { col: 10, row: 17 } },
+    heroes: { hero: { col: 9, row: 16 }, wizard: { col: 7, row: 17 }, archer: { col: 11, row: 17 } },
     chest: { col: 9, row: 1 },
     dragons: [
-      { id: 'dragon_1', label: 'Ring Dragon', col: 5, row: 5, hp: 36, damage: 5, moveRange: 5, attackRange: 5 },
-      { id: 'dragon_2', label: 'Ring Dragon', col: 13, row: 5, hp: 36, damage: 5, moveRange: 5, attackRange: 5 },
-      { id: 'dragon_3', label: 'Ring Dragon', col: 5, row: 13, hp: 34, damage: 5, moveRange: 5, attackRange: 5 },
-      { id: 'dragon_4', label: 'Ring Dragon', col: 13, row: 13, hp: 34, damage: 5, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_1', label: 'Ring Dragon', col: 6, row: 5, hp: 36, damage: 5, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_2', label: 'Ring Dragon', col: 12, row: 5, hp: 36, damage: 5, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_3', label: 'Ring Dragon', col: 6, row: 13, hp: 34, damage: 5, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_4', label: 'Ring Dragon', col: 12, row: 13, hp: 34, damage: 5, moveRange: 5, attackRange: 5 },
     ],
   },
   {
@@ -418,9 +418,12 @@ function App() {
   const canvasRef = useRef(null);
   const audioRef = useRef(null);
   const gameRef = useRef(null);
+  const sfxRef = useRef(null);
+  const sfxMutedRef = useRef(false);
   const [currentTrack, setCurrentTrack] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [sfxMuted, setSfxMuted] = useState(false);
   const [restartNonce, setRestartNonce] = useState(0);
   const [stageIndex, setStageIndex] = useState(0);
   const [battleOutcome, setBattleOutcome] = useState(null);
@@ -441,6 +444,108 @@ function App() {
   }, [volume]);
 
   useEffect(() => {
+    sfxMutedRef.current = sfxMuted;
+    if (!sfxRef.current) {
+      return;
+    }
+    const { context, master } = sfxRef.current;
+    master.gain.setTargetAtTime(sfxMuted ? 0 : 0.24, context.currentTime, 0.02);
+  }, [sfxMuted]);
+
+  function ensureSfx() {
+    if (sfxMutedRef.current) {
+      return null;
+    }
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+      return null;
+    }
+
+    if (!sfxRef.current) {
+      const context = new AudioContextClass();
+      const master = context.createGain();
+      master.gain.value = sfxMutedRef.current ? 0 : 0.24;
+      master.connect(context.destination);
+      sfxRef.current = { context, master };
+    }
+
+    if (sfxRef.current.context.state === 'suspended') {
+      sfxRef.current.context.resume();
+    }
+
+    return sfxRef.current;
+  }
+
+  function scheduleTone({ type = 'square', from = 220, to = from, start = 0, duration = 0.18, gain = 0.15 }) {
+    const sfx = ensureSfx();
+    if (!sfx) {
+      return;
+    }
+
+    const now = sfx.context.currentTime + start;
+    const oscillator = sfx.context.createOscillator();
+    const envelope = sfx.context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(from, now);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, to), now + duration);
+    envelope.gain.setValueAtTime(0.0001, now);
+    envelope.gain.exponentialRampToValueAtTime(gain, now + 0.015);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.connect(envelope);
+    envelope.connect(sfx.master);
+    oscillator.start(now);
+    oscillator.stop(now + duration + 0.02);
+  }
+
+  function scheduleNoise({ start = 0, duration = 0.12, gain = 0.12 }) {
+    const sfx = ensureSfx();
+    if (!sfx) {
+      return;
+    }
+
+    const sampleCount = Math.max(1, Math.floor(sfx.context.sampleRate * duration));
+    const buffer = sfx.context.createBuffer(1, sampleCount, sfx.context.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < sampleCount; i += 1) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / sampleCount);
+    }
+
+    const now = sfx.context.currentTime + start;
+    const source = sfx.context.createBufferSource();
+    const filter = sfx.context.createBiquadFilter();
+    const envelope = sfx.context.createGain();
+    source.buffer = buffer;
+    filter.type = 'bandpass';
+    filter.frequency.value = 920;
+    filter.Q.value = 0.8;
+    envelope.gain.setValueAtTime(gain, now);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    source.connect(filter);
+    filter.connect(envelope);
+    envelope.connect(sfx.master);
+    source.start(now);
+    source.stop(now + duration);
+  }
+
+  function playMeleeSfx() {
+    scheduleNoise({ duration: 0.1, gain: 0.18 });
+    scheduleTone({ type: 'square', from: 520, to: 120, duration: 0.11, gain: 0.12 });
+  }
+
+  function playFireballSfx() {
+    scheduleTone({ type: 'sawtooth', from: 150, to: 740, duration: 0.34, gain: 0.12 });
+    scheduleTone({ type: 'triangle', from: 72, to: 96, start: 0.02, duration: 0.28, gain: 0.1 });
+    scheduleNoise({ start: 0.05, duration: 0.24, gain: 0.07 });
+  }
+
+  function playDeathSfx() {
+    scheduleTone({ type: 'sawtooth', from: 210, to: 48, duration: 0.58, gain: 0.14 });
+    scheduleTone({ type: 'square', from: 102, to: 36, start: 0.08, duration: 0.52, gain: 0.1 });
+    scheduleNoise({ start: 0.22, duration: 0.24, gain: 0.08 });
+  }
+
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !isPlaying) {
       return;
@@ -450,6 +555,7 @@ function App() {
   }, [currentTrack, isPlaying]);
 
   function playPauseMusic() {
+    ensureSfx();
     const audio = audioRef.current;
     if (!audio) {
       return;
@@ -465,8 +571,13 @@ function App() {
   }
 
   function skipTrack() {
+    ensureSfx();
     setCurrentTrack((track) => (track + 1) % TRACKS.length);
     setIsPlaying(true);
+  }
+
+  function toggleSfxMute() {
+    setSfxMuted((muted) => !muted);
   }
 
   function onTrackEnded() {
@@ -475,10 +586,12 @@ function App() {
   }
 
   function endPlayerTurnFromUi() {
+    ensureSfx();
     window.end_player_turn?.();
   }
 
   function restartGame() {
+    ensureSfx();
     setBattleOutcome(null);
     setStageIndex(0);
     setCampaignStats({
@@ -493,11 +606,13 @@ function App() {
   }
 
   function repeatStage() {
+    ensureSfx();
     setBattleOutcome(null);
     setRestartNonce((nonce) => nonce + 1);
   }
 
   function nextStage() {
+    ensureSfx();
     setBattleOutcome(null);
     setStageIndex((index) => Math.min(index + 1, STAGES.length - 1));
     setRestartNonce((nonce) => nonce + 1);
@@ -1000,6 +1115,7 @@ function App() {
     }
 
     function startHeroAttack(targetEnemy) {
+      playMeleeSfx();
       state.phase = 'hero_attacking';
       state.activeAttack = {
         actor: 'hero',
@@ -1050,6 +1166,7 @@ function App() {
       if (!ownerActor || !targetActor) {
         return;
       }
+      playFireballSfx();
       const start = boardToWorld(actorScreenCell(ownerActor));
       const end = boardToWorld(actorScreenCell(targetActor));
       state.fireballs.push({
@@ -1100,6 +1217,14 @@ function App() {
       state.lastAction = `${actorLabel(dragon.id)} attacks`;
     }
 
+    function damageActor(target, damage) {
+      const wasAlive = target.hp > 0;
+      target.hp = Math.max(0, target.hp - damage);
+      if (wasAlive && target.hp <= 0) {
+        playDeathSfx();
+      }
+    }
+
     function spawnSparks(cell, color) {
       const origin = boardToWorld(cell);
       for (let i = 0; i < 18; i += 1) {
@@ -1148,7 +1273,7 @@ function App() {
 
       const enemyTarget = actorById(state.activeAttack.target);
       if (isEnemy(enemyTarget)) {
-        enemyTarget.hp = Math.max(0, enemyTarget.hp - state.activeAttack.damage);
+        damageActor(enemyTarget, state.activeAttack.damage);
         state.stageStats.damageDealt += state.activeAttack.damage;
         state.aggro[state.activeAttack.actor] =
           (state.aggro[state.activeAttack.actor] || 0) + state.activeAttack.damage + 2;
@@ -1159,7 +1284,7 @@ function App() {
       } else {
         const target = actorById(state.activeAttack.target);
         if (!target) return;
-        target.hp = Math.max(0, target.hp - state.activeAttack.damage);
+        damageActor(target, state.activeAttack.damage);
         state.stageStats.damageTaken += state.activeAttack.damage;
         state.attackPulse = { cell: actorCell(target), time: 0.35, color: 'rgba(255, 97, 86, 0.86)' };
         rumbleTiles(actorCell(target));
@@ -1504,7 +1629,7 @@ function App() {
           continue;
         }
 
-        target.hp = Math.max(0, target.hp - hit.damage);
+        damageActor(target, hit.damage);
 
         if (isEnemy(target)) {
           state.stageStats.damageDealt += hit.damage;
@@ -1548,7 +1673,7 @@ function App() {
         if (!target || target.hp <= 0) {
           continue;
         }
-        target.hp = Math.max(0, target.hp - hit.damage);
+        damageActor(target, hit.damage);
         state.stageStats.damageDealt += hit.damage;
         state.aggro.archer = (state.aggro.archer || 0) + hit.damage + 1;
         state.attackPulse = { cell: dragonCell(target), time: 0.35, color: 'rgba(255, 235, 116, 0.84)' };
@@ -2473,6 +2598,7 @@ function App() {
           dragon_attack_range: DRAGON_ATTACK_RANGE,
           chest_open_range: CHEST_OPEN_RANGE,
           terrain_animation_speed_multiplier: TERRAIN_ANIMATION_SPEED,
+          sfx_muted: sfxMutedRef.current,
         },
         camera: {
           auto_zoom_scale: Number(state.camera.scale.toFixed(2)),
@@ -2623,7 +2749,15 @@ function App() {
             The <strong className="magic-word">whole thing</strong>, yes, the <strong className="danger-word">ENTIRE THING INCLUDING ASSETS</strong>, was <strong className="magic-word">vibe coded</strong>.
           </span>
         </header>
-        <canvas ref={canvasRef} aria-label="19 by 19 turn-based RPG board" />
+        <div className="field-wrap">
+          <canvas ref={canvasRef} aria-label="19 by 19 turn-based RPG board" />
+          {battleOutcome === 'victory' && stageIndex < STAGES.length - 1 && (
+            <button type="button" className="next-stage-overlay" onClick={nextStage}>
+              <span>Level cleared</span>
+              <strong>Next Level</strong>
+            </button>
+          )}
+        </div>
         <aside className="music-player" aria-label="Music player">
           <audio
             ref={audioRef}
@@ -2652,14 +2786,12 @@ function App() {
             <button type="button" onClick={endPlayerTurnFromUi} disabled={battleOutcome !== null}>
               End Turn
             </button>
+            <button type="button" onClick={toggleSfxMute}>
+              {sfxMuted ? 'SFX On' : 'SFX Off'}
+            </button>
             {battleOutcome === 'victory' && (
               <button type="button" onClick={repeatStage}>
                 Repeat
-              </button>
-            )}
-            {battleOutcome === 'victory' && stageIndex < STAGES.length - 1 && (
-              <button type="button" onClick={nextStage}>
-                Next
               </button>
             )}
             {battleOutcome === 'campaign' && (

@@ -102,7 +102,20 @@ const TRACKS = [
   { title: 'Glitch Orchard', file: 'Glitch Orchard.wav' },
   { title: 'Soldered Stardust', file: 'Soldered Stardust.wav' },
   { title: 'The Green Dragon of Yore', file: 'The Green Dragon of Yore.wav', requiresGreenDragon: true },
+  { title: 'Gold Rain Unlocks', file: 'Gold Rain Unlocks.wav', requiresCampaignClear: true },
 ];
+
+function availableTracksFor({ greenDragonUnlocked = false, campaignClearUnlocked = false } = {}) {
+  return TRACKS.filter(
+    (track) =>
+      (!track.requiresGreenDragon || greenDragonUnlocked) &&
+      (!track.requiresCampaignClear || campaignClearUnlocked),
+  );
+}
+
+function trackIndexByTitle(tracks, title) {
+  return Math.max(0, tracks.findIndex((track) => track.title === title));
+}
 
 const TERRAIN_MAP = [
   '...................',
@@ -548,6 +561,7 @@ function App() {
   const sfxRef = useRef(null);
   const sfxMutedRef = useRef(false);
   const sessionPowerRef = useRef(createSessionPower());
+  const [pathName, setPathName] = useState(() => window.location.pathname);
   const [currentTrack, setCurrentTrack] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -556,6 +570,7 @@ function App() {
   const [stageIndex, setStageIndex] = useState(0);
   const [playthrough, setPlaythrough] = useState(1);
   const [greenDragonUnlocked, setGreenDragonUnlocked] = useState(false);
+  const [campaignClearUnlocked, setCampaignClearUnlocked] = useState(false);
   const [bonusSongNotice, setBonusSongNotice] = useState(null);
   const [battleOutcome, setBattleOutcome] = useState(null);
   const [sessionPower, setSessionPower] = useState(() => createSessionPower());
@@ -687,6 +702,12 @@ function App() {
     audio.play().catch(() => setIsPlaying(false));
   }, [currentTrack, isPlaying]);
 
+  useEffect(() => {
+    const syncPath = () => setPathName(window.location.pathname);
+    window.addEventListener('popstate', syncPath);
+    return () => window.removeEventListener('popstate', syncPath);
+  }, []);
+
   function playPauseMusic() {
     ensureSfx();
     const audio = audioRef.current;
@@ -757,8 +778,12 @@ function App() {
   function startSecondPlaythrough() {
     ensureSfx();
     setGreenDragonUnlocked(true);
-    setBonusSongNotice('The Green Dragon of Yore is now playable in the song player.');
-    setCurrentTrack(TRACKS.length - 1);
+    setBonusSongNotice(
+      campaignClearUnlocked
+        ? 'The Green Dragon of Yore is now playable. Gold Rain Unlocks is playable too.'
+        : 'The Green Dragon of Yore is now playable in the song player.',
+    );
+    setCurrentTrack(trackIndexByTitle(availableTracksFor({ greenDragonUnlocked: true, campaignClearUnlocked }), 'The Green Dragon of Yore'));
     setIsPlaying(true);
     setPlaythrough(2);
     setBattleOutcome(null);
@@ -790,14 +815,69 @@ function App() {
     window.resolve_chest_reward?.();
   }
 
-  const availableTracks = greenDragonUnlocked ? TRACKS : TRACKS.filter((trackItem) => !trackItem.requiresGreenDragon);
+  function replaceSessionPower(nextSessionPower) {
+    sessionPowerRef.current = nextSessionPower;
+    if (gameRef.current) {
+      gameRef.current.sessionPower = nextSessionPower;
+    }
+    setSessionPower(nextSessionPower);
+  }
+
+  function setCheatChests(value) {
+    const chestsOpened = clamp(Math.round(Number(value) || 0), 0, 99);
+    replaceSessionPower(createSessionPower(chestsOpened, sessionPowerRef.current.characterBuffs));
+  }
+
+  function setCheatBuff(actorId, buffType, value) {
+    const nextBuffs = createCharacterBuffs(sessionPowerRef.current.characterBuffs);
+    const numericValue = Number(value) || 0;
+    nextBuffs[actorId][buffType] =
+      buffType === 'defense' ? roundStat(clamp(numericValue, 0, 99)) : clamp(Math.round(numericValue), 0, 99);
+    replaceSessionPower(createSessionPower(sessionPowerRef.current.chestsOpened, nextBuffs));
+  }
+
+  function setCheatStage(value) {
+    setBattleOutcome(null);
+    setPendingBuffChoice(null);
+    setStageIndex(clamp(Number(value) - 1, 0, STAGES.length - 1));
+    setRestartNonce((nonce) => nonce + 1);
+  }
+
+  function setCheatGreenDragon(enabled) {
+    setGreenDragonUnlocked(enabled);
+    setPlaythrough(enabled ? 2 : 1);
+    setBattleOutcome(null);
+    setPendingBuffChoice(null);
+    setRestartNonce((nonce) => nonce + 1);
+  }
+
+  function setCheatCampaignClear(enabled) {
+    setCampaignClearUnlocked(enabled);
+    setCurrentTrack((trackIndex) => Math.min(trackIndex, availableTracksFor({ greenDragonUnlocked, campaignClearUnlocked: enabled }).length - 1));
+  }
+
+  function playFromCheats() {
+    window.history.pushState({}, '', '/');
+    setPathName('/');
+    setBattleOutcome(null);
+    setPendingBuffChoice(null);
+    setRestartNonce((nonce) => nonce + 1);
+  }
+
+  const availableTracks = availableTracksFor({ greenDragonUnlocked, campaignClearUnlocked });
   const safeTrackIndex = Math.min(currentTrack, availableTracks.length - 1);
   const track = availableTracks[safeTrackIndex];
   const stage = STAGES[stageIndex];
   const allChestsOpened = campaignStats.chestsOpened >= STAGES.length;
   const buffPartyIds = PARTY_IDS.filter((actorId) => actorId !== 'greenDragon' || greenDragonUnlocked);
+  const isCheatsPage = pathName.replace(/\/+$/, '') === '/cheats';
 
   useEffect(() => {
+    if (isCheatsPage) {
+      gameRef.current = null;
+      return undefined;
+    }
+
     setBattleOutcome(null);
 
     const canvas = canvasRef.current;
@@ -1159,6 +1239,23 @@ function App() {
       state.phase = 'victory';
       state.lastAction = 'Level cleared';
       setScreenBlurb(stageIndex === STAGES.length - 1 ? 'CAMPAIGN CLEARED!!!' : 'LEVEL CLEARED!!!', 4.5, true);
+      if (stageIndex === STAGES.length - 1) {
+        const totalChestsOpened = campaignStats.chestsOpened + state.stageStats.chestsOpened;
+        const earnedGreenDragon = totalChestsOpened >= STAGES.length;
+        setCampaignClearUnlocked(true);
+        setCurrentTrack(
+          trackIndexByTitle(
+            availableTracksFor({ greenDragonUnlocked, campaignClearUnlocked: true }),
+            'Gold Rain Unlocks',
+          ),
+        );
+        setIsPlaying(true);
+        setBonusSongNotice(
+          earnedGreenDragon
+            ? 'Gold Rain Unlocks is now playable. All chests claimed: green dragon second run is ready.'
+            : 'Gold Rain Unlocks is now playable in the song player.',
+        );
+      }
       if (!state.outcomePublished) {
         state.outcomePublished = true;
         const stageStats = {
@@ -2962,6 +3059,7 @@ function App() {
         music: {
           current_track: track.title,
           available_tracks: availableTracks.map((trackItem) => trackItem.title),
+          campaign_clear_track_unlocked: campaignClearUnlocked,
           bonus_song_notice: bonusSongNotice,
         },
         camera: {
@@ -3141,7 +3239,86 @@ function App() {
       delete window.end_player_turn;
       delete window.resolve_chest_reward;
     };
-  }, [restartNonce]);
+  }, [restartNonce, isCheatsPage]);
+
+  if (isCheatsPage) {
+    return (
+      <main className="cheats-main">
+        <section className="cheats-panel" aria-label="Cheats">
+          <header>
+            <strong>Cheats</strong>
+            <span>Session controls</span>
+          </header>
+          <div className="cheat-grid">
+            <label>
+              <span>Level</span>
+              <select value={stageIndex + 1} onChange={(event) => setCheatStage(event.target.value)}>
+                {STAGES.map((stageOption, index) => (
+                  <option key={stageOption.name} value={index + 1}>
+                    {index + 1}. {stageOption.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Chests unlocked</span>
+              <input
+                type="number"
+                min="0"
+                max="99"
+                value={sessionPower.chestsOpened}
+                onChange={(event) => setCheatChests(event.target.value)}
+              />
+            </label>
+            <label className="cheat-toggle">
+              <input
+                type="checkbox"
+                checked={greenDragonUnlocked}
+                onChange={(event) => setCheatGreenDragon(event.target.checked)}
+              />
+              <span>Green dragon unlocked</span>
+            </label>
+            <label className="cheat-toggle">
+              <input
+                type="checkbox"
+                checked={campaignClearUnlocked}
+                onChange={(event) => setCheatCampaignClear(event.target.checked)}
+              />
+              <span>Campaign song unlocked</span>
+            </label>
+          </div>
+          <div className="cheat-actions">
+            <button type="button" onClick={() => setCheatStage(stageIndex + 1)}>
+              Reload Level
+            </button>
+            <button type="button" onClick={playFromCheats}>
+              Play
+            </button>
+          </div>
+          <div className="cheat-stats">
+            {PARTY_IDS.map((actorId) => (
+              <fieldset key={actorId}>
+                <legend>{PARTY_LABELS[actorId]}</legend>
+                {['range', 'damage', 'defense'].map((buffType) => (
+                  <label key={buffType}>
+                    <span>{buffType}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="99"
+                      step={buffType === 'defense' ? '0.5' : '1'}
+                      value={sessionPower.characterBuffs[actorId][buffType]}
+                      onChange={(event) => setCheatBuff(actorId, buffType, event.target.value)}
+                    />
+                  </label>
+                ))}
+              </fieldset>
+            ))}
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main>

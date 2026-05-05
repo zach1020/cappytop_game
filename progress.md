@@ -36,3 +36,5 @@ TODO:
 - Chest terrain is normalized at board creation so every chest cell renders as grass, fixing chest-on-water placements.
 - Moved `The Green Dragon of Yore.wav` into `public/` and added it as a bonus music-player track that unlocks with the green dragon, with an in-player unlock notice.
 - Moved the chest skill-up chooser into a fixed, high-z-index modal centered over the game so it appears above the canvas instead of inside the lower music panel.
+- Moved `Gold Rain Unlocks.wav` into `public/` and added it as a campaign-clear music-player unlock, independent of the green dragon/all-chests reward.
+- Added an unlinked `/cheats` route for session testing: stage selection, chest count, green dragon toggle, campaign song toggle, and per-character range/damage/defense buff controls.

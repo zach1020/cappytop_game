@@ -49,9 +49,9 @@ const WIZARD_MOVE_RANGE = 5;
 const ARCHER_MOVE_RANGE = 5;
 const DRAGON_MOVE_RANGE = 5;
 const HERO_ATTACK_RANGE = 2;
-const WIZARD_ATTACK_RANGE = 8;
-const ARCHER_ATTACK_RANGE = 7;
-const DRAGON_ATTACK_RANGE = 7;
+const WIZARD_ATTACK_RANGE = 5;
+const ARCHER_ATTACK_RANGE = 5;
+const DRAGON_ATTACK_RANGE = 5;
 const CHEST_OPEN_RANGE = 2;
 const HERO_ATTACK_DAMAGE = 5;
 const WIZARD_ATTACK_DAMAGE = 4;
@@ -101,7 +101,7 @@ const STAGES = [
     terrain: TERRAIN_MAP,
     heroes: { hero: INITIAL_HERO_CELL, wizard: INITIAL_WIZARD_CELL, archer: INITIAL_ARCHER_CELL },
     chest: CHEST_CELL,
-    dragons: [{ id: 'dragon_1', label: 'Dragon', col: 14, row: 14, hp: 30, damage: 3, moveRange: 5, attackRange: 7 }],
+    dragons: [{ id: 'dragon_1', label: 'Dragon', col: 14, row: 14, hp: 30, damage: 3, moveRange: 5, attackRange: 5 }],
   },
   {
     name: 'Split Creek',
@@ -129,8 +129,8 @@ const STAGES = [
     heroes: { hero: { col: 3, row: 9 }, wizard: { col: 2, row: 10 }, archer: { col: 4, row: 10 } },
     chest: { col: 17, row: 2 },
     dragons: [
-      { id: 'dragon_1', label: 'North Dragon', col: 14, row: 5, hp: 28, damage: 3, moveRange: 5, attackRange: 7 },
-      { id: 'dragon_2', label: 'South Dragon', col: 15, row: 15, hp: 26, damage: 3, moveRange: 5, attackRange: 7 },
+      { id: 'dragon_1', label: 'North Dragon', col: 14, row: 5, hp: 28, damage: 3, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_2', label: 'South Dragon', col: 15, row: 15, hp: 26, damage: 3, moveRange: 5, attackRange: 5 },
     ],
   },
   {
@@ -159,8 +159,8 @@ const STAGES = [
     heroes: { hero: { col: 2, row: 2 }, wizard: { col: 1, row: 3 }, archer: { col: 3, row: 3 } },
     chest: { col: 16, row: 17 },
     dragons: [
-      { id: 'dragon_1', label: 'Marsh Dragon', col: 13, row: 4, hp: 32, damage: 4, moveRange: 5, attackRange: 7 },
-      { id: 'dragon_2', label: 'Reed Dragon', col: 15, row: 11, hp: 30, damage: 4, moveRange: 5, attackRange: 7 },
+      { id: 'dragon_1', label: 'Marsh Dragon', col: 13, row: 4, hp: 32, damage: 4, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_2', label: 'Reed Dragon', col: 15, row: 11, hp: 30, damage: 4, moveRange: 5, attackRange: 5 },
     ],
   },
   {
@@ -189,9 +189,9 @@ const STAGES = [
     heroes: { hero: { col: 2, row: 16 }, wizard: { col: 1, row: 15 }, archer: { col: 3, row: 15 } },
     chest: { col: 17, row: 1 },
     dragons: [
-      { id: 'dragon_1', label: 'Bridge Dragon', col: 13, row: 3, hp: 34, damage: 4, moveRange: 5, attackRange: 7 },
-      { id: 'dragon_2', label: 'Causeway Dragon', col: 15, row: 9, hp: 34, damage: 4, moveRange: 5, attackRange: 7 },
-      { id: 'dragon_3', label: 'Feral Dragon', col: 10, row: 15, hp: 28, damage: 4, moveRange: 6, attackRange: 7 },
+      { id: 'dragon_1', label: 'Bridge Dragon', col: 13, row: 3, hp: 34, damage: 4, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_2', label: 'Causeway Dragon', col: 15, row: 9, hp: 34, damage: 4, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_3', label: 'Feral Dragon', col: 10, row: 15, hp: 28, damage: 4, moveRange: 6, attackRange: 5 },
     ],
   },
   {
@@ -220,10 +220,10 @@ const STAGES = [
     heroes: { hero: { col: 9, row: 16 }, wizard: { col: 8, row: 17 }, archer: { col: 10, row: 17 } },
     chest: { col: 9, row: 1 },
     dragons: [
-      { id: 'dragon_1', label: 'Ring Dragon', col: 5, row: 5, hp: 36, damage: 5, moveRange: 5, attackRange: 7 },
-      { id: 'dragon_2', label: 'Ring Dragon', col: 13, row: 5, hp: 36, damage: 5, moveRange: 5, attackRange: 7 },
-      { id: 'dragon_3', label: 'Ring Dragon', col: 5, row: 13, hp: 34, damage: 5, moveRange: 5, attackRange: 7 },
-      { id: 'dragon_4', label: 'Ring Dragon', col: 13, row: 13, hp: 34, damage: 5, moveRange: 5, attackRange: 7 },
+      { id: 'dragon_1', label: 'Ring Dragon', col: 5, row: 5, hp: 36, damage: 5, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_2', label: 'Ring Dragon', col: 13, row: 5, hp: 36, damage: 5, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_3', label: 'Ring Dragon', col: 5, row: 13, hp: 34, damage: 5, moveRange: 5, attackRange: 5 },
+      { id: 'dragon_4', label: 'Ring Dragon', col: 13, row: 13, hp: 34, damage: 5, moveRange: 5, attackRange: 5 },
     ],
   },
   {
@@ -252,11 +252,11 @@ const STAGES = [
     heroes: { hero: { col: 9, row: 9 }, wizard: { col: 8, row: 9 }, archer: { col: 10, row: 9 } },
     chest: { col: 18, row: 9 },
     dragons: [
-      { id: 'dragon_1', label: 'Problem Dragon', col: 1, row: 1, hp: 40, damage: 5, moveRange: 6, attackRange: 8 },
-      { id: 'dragon_2', label: 'Problem Dragon', col: 17, row: 1, hp: 40, damage: 5, moveRange: 6, attackRange: 8 },
-      { id: 'dragon_3', label: 'Problem Dragon', col: 1, row: 17, hp: 40, damage: 5, moveRange: 6, attackRange: 8 },
-      { id: 'dragon_4', label: 'Problem Dragon', col: 17, row: 17, hp: 40, damage: 5, moveRange: 6, attackRange: 8 },
-      { id: 'dragon_5', label: 'Boss Dragon', col: 14, row: 9, hp: 54, damage: 6, moveRange: 6, attackRange: 8 },
+      { id: 'dragon_1', label: 'Problem Dragon', col: 1, row: 1, hp: 40, damage: 5, moveRange: 6, attackRange: 5 },
+      { id: 'dragon_2', label: 'Problem Dragon', col: 17, row: 1, hp: 40, damage: 5, moveRange: 6, attackRange: 5 },
+      { id: 'dragon_3', label: 'Problem Dragon', col: 1, row: 17, hp: 40, damage: 5, moveRange: 6, attackRange: 5 },
+      { id: 'dragon_4', label: 'Problem Dragon', col: 17, row: 17, hp: 40, damage: 5, moveRange: 6, attackRange: 5 },
+      { id: 'dragon_5', label: 'Boss Dragon', col: 14, row: 9, hp: 54, damage: 6, moveRange: 6, attackRange: 5 },
     ],
   },
 ];
@@ -898,19 +898,18 @@ function App() {
         return;
       }
 
-      const padding = state.tileSize * 5.8;
-      const minX = Math.min(...points.map((point) => point.x)) - padding;
-      const maxX = Math.max(...points.map((point) => point.x)) + padding;
-      const minY = Math.min(...points.map((point) => point.y)) - padding;
-      const maxY = Math.max(...points.map((point) => point.y)) + padding;
-      const rawWidth = maxX - minX;
-      const rawHeight = maxY - minY;
+      const baseMinX = Math.min(...points.map((point) => point.x));
+      const baseMaxX = Math.max(...points.map((point) => point.x));
+      const baseMinY = Math.min(...points.map((point) => point.y));
+      const baseMaxY = Math.max(...points.map((point) => point.y));
+      const rawWidth = baseMaxX - baseMinX;
+      const rawHeight = baseMaxY - baseMinY;
       const closeness = clamp(1 - Math.max(rawWidth, rawHeight) / (state.tileSize * 20), 0, 1);
       const intimatePadding = state.tileSize * (5.8 - closeness * 3.1);
-      const closeMinX = Math.min(...points.map((point) => point.x)) - intimatePadding;
-      const closeMaxX = Math.max(...points.map((point) => point.x)) + intimatePadding;
-      const closeMinY = Math.min(...points.map((point) => point.y)) - intimatePadding;
-      const closeMaxY = Math.max(...points.map((point) => point.y)) + intimatePadding;
+      const closeMinX = baseMinX - intimatePadding;
+      const closeMaxX = baseMaxX + intimatePadding;
+      const closeMinY = baseMinY - intimatePadding;
+      const closeMaxY = baseMaxY + intimatePadding;
       const focusWidth = Math.max(state.tileSize * (7 - closeness * 2.4), closeMaxX - closeMinX);
       const focusHeight = Math.max(state.tileSize * (7 - closeness * 2.4), closeMaxY - closeMinY);
       const autoScale = clamp(
@@ -1788,6 +1787,32 @@ function App() {
       }
     }
 
+    function drawAttackRadius(actor) {
+      if (!actor || actor.hp <= 0 || state.acted[actor.id] || (actor.id !== 'wizard' && actor.id !== 'archer')) {
+        return;
+      }
+
+      const range = attackRangeFor(actor);
+      const origin = actorCell(actor);
+
+      for (let row = origin.row - range; row <= origin.row + range; row += 1) {
+        for (let col = origin.col - range; col <= origin.col + range; col += 1) {
+          const cell = { col, row };
+          if (!isCellInBounds(cell) || gridDistance(origin, cell) > range || isWaterCell(cell, state.terrainMap)) {
+            continue;
+          }
+
+          const edge = gridDistance(origin, cell) === range;
+          drawCellHighlight(
+            cell,
+            edge ? 'rgba(255, 226, 115, 0.065)' : 'rgba(255, 226, 115, 0.035)',
+            edge ? 'rgba(255, 226, 115, 0.22)' : null,
+            7,
+          );
+        }
+      }
+    }
+
     function drawActorCellOutline(actor, color) {
       if (actor.hp <= 0) {
         return;
@@ -1824,6 +1849,7 @@ function App() {
       if (isPartyTurn()) {
         const actor = selectedActor();
         if (actor && !state.acted[actor.id]) {
+          drawAttackRadius(actor);
           const range = moveRangeFor(actor);
           for (const option of findReachableCells(actorCell(actor), range, occupiedKeysFor(actor.id, true), state.terrainMap)) {
             drawCellHighlight(option.cell, 'rgba(189, 231, 122, 0.08)', null);
@@ -2435,7 +2461,6 @@ function App() {
         round: state.round,
         selected_actor: state.selectedActor,
         acted: state.acted,
-        rewind_snapshots: state.history.length,
         last_action: state.lastAction,
         rules: {
           hero_move_range: HERO_MOVE_RANGE,
@@ -2583,7 +2608,6 @@ function App() {
       window.removeEventListener('keydown', onKeyDown);
       delete window.render_game_to_text;
       delete window.advanceTime;
-      delete window.rewind_turn;
       delete window.end_player_turn;
     };
   }, [restartNonce]);
@@ -2624,9 +2648,6 @@ function App() {
             </button>
             <button type="button" onClick={skipTrack}>
               Skip
-            </button>
-            <button type="button" onClick={rewindTurnFromUi} disabled={rewindCount === 0}>
-              Rewind {rewindCount}
             </button>
             <button type="button" onClick={endPlayerTurnFromUi} disabled={battleOutcome !== null}>
               End Turn

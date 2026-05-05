@@ -11,3 +11,16 @@ Updates:
 
 TODO:
 - Run final build and browser screenshot/state checks after the latest hover/music/camera/attack updates.
+- Added fixed six-stage campaign data with hard-coded terrain maps, chest placements, hero starts, and dragon squads that scale up through a very hard final stage.
+- Converted enemy logic from one dragon to multiple fixed dragons per stage, including dragon turns, targeting, attacks, health bars, camera framing, and text state output.
+- Added stage outcomes: level clear, campaign clear reward/stat screen, game over, repeat stage, next stage, restart game, and end-turn controls.
+- Removed the rewind feature entirely after it caused freezes: no history snapshots, no rewind button, no `window.rewind_turn` hook.
+- Fixed archer attack sheet slicing to use the actual 6x3 grid (`502x560` frames) so the attack no longer cuts across rows.
+- Increased close-range auto zoom for a more intimate camera when pertinent characters cluster, while keeping all living party/enemies in frame.
+- Wired attack rumble into the actual terrain/highlight rendering and decay loop: target tile shakes strongly, adjacent tiles shake lightly.
+- Ran `npm run build`; build completed successfully. Ran web-game Playwright smoke check and inspected screenshot/state for Stage 1 load.
+
+TODO:
+- Play through later stages manually to tune exact dragon HP/damage and chest placements for difficulty feel.
+- Updated dragon ranged attack behavior to use the same tactical range as ranged player characters: wizard/archer range 5, dragons range 5 across every hard-coded stage. Dragons still move on their turn when targets are outside that range.
+- Ran `npm run build`; build completed successfully. Ran web-game Playwright smoke check and confirmed text state reports `dragon_attack_range: 5`.

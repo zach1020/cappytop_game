@@ -57,6 +57,10 @@ const HERO_ATTACK_DAMAGE = 5;
 const WIZARD_ATTACK_DAMAGE = 4;
 const ARCHER_ATTACK_DAMAGE = 4;
 const DRAGON_ATTACK_DAMAGE = 3;
+const CHEST_ATTACK_BONUS = 0.5;
+const CHEST_DEFENSE_BONUS = 0.25;
+const MAX_CHEST_ATTACK_BONUS = 4;
+const MAX_CHEST_DEFENSE_BONUS = 3;
 const MIN_MANUAL_ZOOM = 0.6;
 const MAX_MANUAL_ZOOM = 1.75;
 const EDGE_FOG_MIN_SCALE = 1.08;
@@ -414,12 +418,29 @@ function findReachableCells(from, maxSteps, blockedKeys = new Set(), terrainMap 
   return reachable;
 }
 
+function roundStat(value) {
+  return Math.round(value * 10) / 10;
+}
+
+function formatStat(value) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function createSessionPower(chestsOpened = 0) {
+  return {
+    chestsOpened,
+    attackBonus: roundStat(Math.min(chestsOpened * CHEST_ATTACK_BONUS, MAX_CHEST_ATTACK_BONUS)),
+    defenseBonus: roundStat(Math.min(chestsOpened * CHEST_DEFENSE_BONUS, MAX_CHEST_DEFENSE_BONUS)),
+  };
+}
+
 function App() {
   const canvasRef = useRef(null);
   const audioRef = useRef(null);
   const gameRef = useRef(null);
   const sfxRef = useRef(null);
   const sfxMutedRef = useRef(false);
+  const sessionPowerRef = useRef(createSessionPower());
   const [currentTrack, setCurrentTrack] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -427,6 +448,7 @@ function App() {
   const [restartNonce, setRestartNonce] = useState(0);
   const [stageIndex, setStageIndex] = useState(0);
   const [battleOutcome, setBattleOutcome] = useState(null);
+  const [sessionPower, setSessionPower] = useState(() => createSessionPower());
   const [campaignStats, setCampaignStats] = useState({
     stagesCleared: 0,
     chestsOpened: 0,
@@ -667,6 +689,7 @@ function App() {
       aiDelay: 0,
       round: 1,
       lastAction: 'Player turn',
+      sessionPower: sessionPowerRef.current,
       attackPulse: null,
       tileRumbles: [],
       activeAttack: null,
@@ -835,6 +858,20 @@ function App() {
       if (actor.id === 'wizard') return WIZARD_ATTACK_RANGE;
       if (actor.id === 'archer') return ARCHER_ATTACK_RANGE;
       return HERO_ATTACK_RANGE;
+    }
+
+    function baseAttackDamageFor(actorId) {
+      if (actorId === 'wizard') return WIZARD_ATTACK_DAMAGE;
+      if (actorId === 'archer') return ARCHER_ATTACK_DAMAGE;
+      return HERO_ATTACK_DAMAGE;
+    }
+
+    function attackDamageFor(actorId) {
+      return roundStat(baseAttackDamageFor(actorId) + state.sessionPower.attackBonus);
+    }
+
+    function incomingDamageAfterDefense(damage) {
+      return roundStat(Math.max(1, damage - state.sessionPower.defenseBonus));
     }
 
     function selectedActor() {
@@ -1122,7 +1159,7 @@ function App() {
         target: targetEnemy.id,
         elapsed: 0,
         duration: HERO_ATTACK_FRAMES / HERO_ATTACK_FPS,
-        damage: HERO_ATTACK_DAMAGE,
+        damage: attackDamageFor('hero'),
         applied: false,
       };
       state.lastAction = 'Hero attacks';
@@ -1137,7 +1174,7 @@ function App() {
         target: targetEnemy.id,
         elapsed: 0,
         duration: WIZARD_CAST_FRAMES / WIZARD_CAST_FPS,
-        damage: WIZARD_ATTACK_DAMAGE,
+        damage: attackDamageFor('wizard'),
         applied: false,
       };
       state.lastAction = 'Wizard casts';
@@ -1152,7 +1189,7 @@ function App() {
         target: targetEnemy.id,
         elapsed: 0,
         duration: ARCHER_ATTACK_FRAMES / ARCHER_ATTACK_FPS,
-        damage: ARCHER_ATTACK_DAMAGE,
+        damage: attackDamageFor('archer'),
         applied: false,
       };
       state.lastAction = 'Archer fires';
@@ -1183,7 +1220,7 @@ function App() {
       state.lastAction = `${actorLabel(owner)} fireball flies`;
     }
 
-    function launchArrow() {
+    function launchArrow(damage) {
       const targetEnemy = actorById(state.activeAttack.target);
       if (!targetEnemy) {
         return;
@@ -1196,7 +1233,7 @@ function App() {
         end,
         elapsed: 0,
         duration: 0.48,
-        damage: ARCHER_ATTACK_DAMAGE,
+        damage,
       });
       state.phase = 'arrow_flying';
       state.activeAttack = null;
@@ -1211,7 +1248,8 @@ function App() {
         target: targetId,
         elapsed: 0,
         duration: DRAGON_ATTACK_FRAMES / DRAGON_ATTACK_FPS,
-        damage: dragon.damage,
+        damage: incomingDamageAfterDefense(dragon.damage),
+        baseDamage: dragon.damage,
         applied: false,
       };
       state.lastAction = `${actorLabel(dragon.id)} attacks`;
@@ -1427,10 +1465,14 @@ function App() {
         state.chest.bonusRound = state.round;
         state.chest.opener = actor.id;
         state.stageStats.chestsOpened = 1;
-        setScreenBlurb('CHEST OPENED!', 1.35);
+        const nextSessionPower = createSessionPower(state.sessionPower.chestsOpened + 1);
+        state.sessionPower = nextSessionPower;
+        sessionPowerRef.current = nextSessionPower;
+        setSessionPower(nextSessionPower);
+        setScreenBlurb('CHEST POWER!', 1.35);
         state.lastClickCell = chestCell();
         state.blockedClickCell = null;
-        state.lastAction = `${actorLabel(actor.id)} opens bonus chest`;
+        state.lastAction = `${actorLabel(actor.id)} opens chest: ATK +${formatStat(nextSessionPower.attackBonus)} DEF +${formatStat(nextSessionPower.defenseBonus)}`;
         return;
       }
 
@@ -1743,17 +1785,17 @@ function App() {
           const targetId = state.activeAttack.target;
           const dragon = actorById(state.activeAttack.actor);
           if (!dragon) return;
-          launchFireball(dragon.id, targetId, dragon.damage);
+          launchFireball(dragon.id, targetId, state.activeAttack.damage);
         }
       } else if (state.phase === 'wizard_casting') {
         state.activeAttack.elapsed += dt;
         if (state.activeAttack.elapsed >= state.activeAttack.duration) {
-          launchFireball('wizard', state.activeAttack.target, WIZARD_ATTACK_DAMAGE);
+          launchFireball('wizard', state.activeAttack.target, state.activeAttack.damage);
         }
       } else if (state.phase === 'archer_attacking') {
         state.activeAttack.elapsed += dt;
         if (state.activeAttack.elapsed >= state.activeAttack.duration) {
-          launchArrow();
+          launchArrow(state.activeAttack.damage);
         }
       } else if (state.phase === 'fireball_flying') {
         updateFireballs(dt);
@@ -2597,9 +2639,14 @@ function App() {
           archer_attack_range: ARCHER_ATTACK_RANGE,
           dragon_attack_range: DRAGON_ATTACK_RANGE,
           chest_open_range: CHEST_OPEN_RANGE,
+          chest_attack_bonus_per_open: CHEST_ATTACK_BONUS,
+          chest_defense_bonus_per_open: CHEST_DEFENSE_BONUS,
+          max_chest_attack_bonus: MAX_CHEST_ATTACK_BONUS,
+          max_chest_defense_bonus: MAX_CHEST_DEFENSE_BONUS,
           terrain_animation_speed_multiplier: TERRAIN_ANIMATION_SPEED,
           sfx_muted: sfxMutedRef.current,
         },
+        session_power: state.sessionPower,
         camera: {
           auto_zoom_scale: Number(state.camera.scale.toFixed(2)),
           manual_zoom: Number(state.camera.manualZoom.toFixed(2)),
@@ -2623,6 +2670,8 @@ function App() {
           cell_col: state.hero.col,
           cell_row: state.hero.row,
           hp: state.hero.hp,
+          max_hp: state.hero.maxHp,
+          attack_damage: attackDamageFor('hero'),
           moving: state.hero.moving,
           queued_steps: state.hero.path.length,
         },
@@ -2632,6 +2681,8 @@ function App() {
           cell_col: state.wizard.col,
           cell_row: state.wizard.row,
           hp: state.wizard.hp,
+          max_hp: state.wizard.maxHp,
+          attack_damage: attackDamageFor('wizard'),
           moving: state.wizard.moving,
           queued_steps: state.wizard.path.length,
         },
@@ -2641,6 +2692,8 @@ function App() {
           cell_col: state.archer.col,
           cell_row: state.archer.row,
           hp: state.archer.hp,
+          max_hp: state.archer.maxHp,
+          attack_damage: attackDamageFor('archer'),
           moving: state.archer.moving,
           queued_steps: state.archer.path.length,
         },
@@ -2770,6 +2823,9 @@ function App() {
               Stage {stageIndex + 1}/{STAGES.length} · {stage.name} · Track {currentTrack + 1}/{TRACKS.length}
             </span>
             <strong>{track.title}</strong>
+            <span className="power-label">
+              Chests {sessionPower.chestsOpened} · ATK +{formatStat(sessionPower.attackBonus)} · DEF +{formatStat(sessionPower.defenseBonus)}
+            </span>
             {battleOutcome && (
               <span className="outcome-label">
                 {battleOutcome === 'campaign' ? 'CAMPAIGN CLEARED' : battleOutcome === 'victory' ? 'LEVEL CLEARED' : 'GAME OVER'}
@@ -2797,6 +2853,11 @@ function App() {
             {battleOutcome === 'campaign' && (
               <button type="button" onClick={repeatStage}>
                 Repeat
+              </button>
+            )}
+            {battleOutcome === 'defeat' && (
+              <button type="button" onClick={repeatStage}>
+                Retry
               </button>
             )}
             {battleOutcome && (

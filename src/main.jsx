@@ -59,6 +59,7 @@ const ARCHER_ATTACK_DAMAGE = 4;
 const DRAGON_ATTACK_DAMAGE = 3;
 const MIN_MANUAL_ZOOM = 0.6;
 const MAX_MANUAL_ZOOM = 1.75;
+const EDGE_FOG_MIN_SCALE = 1.08;
 
 const INITIAL_HERO_CELL = { col: 5, row: 9 };
 const INITIAL_WIZARD_CELL = { col: 4, row: 10 };
@@ -256,6 +257,8 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
   const [rewindCount, setRewindCount] = useState(0);
+  const [restartNonce, setRestartNonce] = useState(0);
+  const [battleOutcome, setBattleOutcome] = useState(null);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -302,9 +305,18 @@ function App() {
     window.rewind_turn?.();
   }
 
+  function restartGame() {
+    setBattleOutcome(null);
+    setRewindCount(0);
+    setRestartNonce((nonce) => nonce + 1);
+  }
+
   const track = TRACKS[currentTrack];
 
   useEffect(() => {
+    setBattleOutcome(null);
+    setRewindCount(0);
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const grassImage = loadImage('/grass_tile_waving.png');
@@ -334,6 +346,7 @@ function App() {
       fireballs: [],
       arrows: [],
       particles: [],
+      screenBlurb: null,
       selectedActor: 'hero',
       acted: { hero: false, wizard: false, archer: false },
       aggro: { hero: 0, wizard: 0, archer: 0 },
@@ -556,6 +569,30 @@ function App() {
       render();
     }
 
+    function setScreenBlurb(text, duration = 1.35, persist = false) {
+      state.screenBlurb = { text, elapsed: 0, duration, persist };
+    }
+
+    function completeLevel() {
+      if (state.phase === 'victory') {
+        return;
+      }
+      state.phase = 'victory';
+      state.lastAction = 'Level cleared';
+      setScreenBlurb('LEVEL CLEARED!!!', 4.5, true);
+      setBattleOutcome('victory');
+    }
+
+    function gameOver() {
+      if (state.phase === 'defeat') {
+        return;
+      }
+      state.phase = 'defeat';
+      state.lastAction = 'Game over';
+      setScreenBlurb('GAME OVER !!!', 4.5, true);
+      setBattleOutcome('defeat');
+    }
+
     function resize() {
       const maxSide = Math.min(window.innerWidth - 32, window.innerHeight - 32, 980);
       const side = Math.max(420, Math.floor(maxSide));
@@ -711,6 +748,7 @@ function App() {
       state.fireballs = [];
       state.arrows = [];
       state.particles = [];
+      state.screenBlurb = null;
       state.activePathHighlight = null;
       state.blockedClickCell = null;
       state.lastClickCell = null;
@@ -917,14 +955,12 @@ function App() {
       state.activeAttack = null;
 
       if (state.dragon.hp <= 0) {
-        state.phase = 'victory';
-        state.lastAction = 'Dragon defeated';
+        completeLevel();
         return;
       }
 
       if (livingParty().length === 0) {
-        state.phase = 'defeat';
-        state.lastAction = 'Party defeated';
+        gameOver();
         return;
       }
 
@@ -1043,6 +1079,7 @@ function App() {
         state.chest.elapsed = 0;
         state.chest.bonusRound = state.round;
         state.chest.opener = actor.id;
+        setScreenBlurb('CHEST OPENED!', 1.35);
         state.lastClickCell = chestCell();
         state.blockedClickCell = null;
         state.lastAction = `${actorLabel(actor.id)} opens bonus chest`;
@@ -1093,6 +1130,7 @@ function App() {
 
     function chooseDragonMove(target) {
       const blocked = new Set(livingParty().map((actor) => cellKey(actorCell(actor))));
+      blocked.add(cellKey(chestCell()));
       const options = findReachableCells(dragonCell(), DRAGON_MOVE_RANGE, blocked);
       let best = null;
 
@@ -1110,8 +1148,7 @@ function App() {
     function dragonAct() {
       const target = chooseDragonTarget();
       if (!target) {
-        state.phase = 'defeat';
-        state.lastAction = 'Party defeated';
+        gameOver();
         return;
       }
 
@@ -1229,8 +1266,7 @@ function App() {
           state.lastAction = `${actorLabel(hit.owner)} hits dragon for ${hit.damage}`;
 
           if (state.dragon.hp <= 0) {
-            state.phase = 'victory';
-            state.lastAction = 'Dragon defeated';
+            completeLevel();
           } else {
             finishPlayerActorAction(hit.owner);
           }
@@ -1240,8 +1276,7 @@ function App() {
           state.lastAction = `Dragon fireball hits ${actorLabel(hit.target)}`;
 
           if (livingParty().length === 0) {
-            state.phase = 'defeat';
-            state.lastAction = 'Party defeated';
+            gameOver();
           } else {
             beginPlayerTurn();
           }
@@ -1265,8 +1300,7 @@ function App() {
         state.lastAction = `Archer hits dragon for ${hit.damage}`;
 
         if (state.dragon.hp <= 0) {
-          state.phase = 'victory';
-          state.lastAction = 'Dragon defeated';
+          completeLevel();
         } else {
           finishPlayerActorAction('archer');
         }
@@ -1287,6 +1321,13 @@ function App() {
       state.time += dt;
       updateCamera(dt);
       updateParticles(dt);
+
+      if (state.screenBlurb) {
+        state.screenBlurb.elapsed += dt;
+        if (!state.screenBlurb.persist && state.screenBlurb.elapsed >= state.screenBlurb.duration) {
+          state.screenBlurb = null;
+        }
+      }
 
       if (state.attackPulse) {
         state.attackPulse.time -= dt;
@@ -1599,6 +1640,40 @@ function App() {
       });
     }
 
+    function drawArcher() {
+      if (state.archer.hp <= 0) {
+        return;
+      }
+      const archerCenterX = cellCenter(state.archer.x, state.tileSize, state.boardOffsetX);
+      const archerFeetY = state.boardOffsetY + (state.archer.y + 1.03) * state.tileSize;
+      const drawHeight = state.tileSize * 2.18;
+      const drawWidth = drawHeight * (ARCHER_FRAME_WIDTH / ARCHER_FRAME_HEIGHT);
+      const bob = state.archer.moving ? Math.sin(state.time * 16) * 1.1 : 0;
+      const attackFrame =
+        state.activeAttack?.actor === 'archer'
+          ? Math.min(ARCHER_ATTACK_FRAMES - 1, Math.floor(state.activeAttack.elapsed * ARCHER_ATTACK_FPS))
+          : 0;
+      const sourceX = (attackFrame % ARCHER_COLUMNS) * ARCHER_FRAME_WIDTH;
+      const sourceY = Math.floor(attackFrame / ARCHER_COLUMNS) * ARCHER_FRAME_HEIGHT;
+
+      withLowHealthFlash(state.archer, () => {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.42)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 8;
+        ctx.drawImage(
+          archerImage,
+          sourceX,
+          sourceY,
+          ARCHER_FRAME_WIDTH,
+          ARCHER_FRAME_HEIGHT,
+          archerCenterX - drawWidth / 2,
+          archerFeetY - drawHeight + bob,
+          drawWidth,
+          drawHeight,
+        );
+      });
+    }
+
     function drawDragon() {
       if (state.dragon.hp <= 0) {
         return;
@@ -1633,6 +1708,35 @@ function App() {
       });
     }
 
+    function drawChest() {
+      const frame = state.chest.opened
+        ? Math.min(CHEST_FRAMES - 1, Math.floor(state.chest.elapsed * CHEST_FPS))
+        : 0;
+      const sourceX = (frame % CHEST_COLUMNS) * CHEST_FRAME_WIDTH;
+      const sourceY = Math.floor(frame / CHEST_COLUMNS) * CHEST_FRAME_HEIGHT;
+      const centerX = cellCenter(state.chest.col, state.tileSize, state.boardOffsetX);
+      const feetY = state.boardOffsetY + (state.chest.row + 0.98) * state.tileSize;
+      const drawWidth = state.tileSize * 1.5;
+      const drawHeight = drawWidth * (CHEST_FRAME_HEIGHT / CHEST_FRAME_WIDTH);
+
+      ctx.save();
+      ctx.shadowColor = state.chest.opened ? 'rgba(255, 208, 75, 0.58)' : 'rgba(0, 0, 0, 0.4)';
+      ctx.shadowBlur = state.chest.opened ? 18 : 9;
+      ctx.shadowOffsetY = 6;
+      ctx.drawImage(
+        chestImage,
+        sourceX,
+        sourceY,
+        CHEST_FRAME_WIDTH,
+        CHEST_FRAME_HEIGHT,
+        centerX - drawWidth / 2,
+        feetY - drawHeight,
+        drawWidth,
+        drawHeight,
+      );
+      ctx.restore();
+    }
+
     function drawFireballs() {
       for (const fireball of state.fireballs) {
         const progress = clamp(fireball.elapsed / fireball.duration, 0, 1);
@@ -1661,6 +1765,36 @@ function App() {
           width,
           height,
         );
+        ctx.restore();
+      }
+    }
+
+    function drawArrows() {
+      for (const arrow of state.arrows) {
+        const progress = clamp(arrow.elapsed / arrow.duration, 0, 1);
+        const x = arrow.start.x + (arrow.end.x - arrow.start.x) * progress;
+        const y = arrow.start.y + (arrow.end.y - arrow.start.y) * progress;
+        const angle = Math.atan2(arrow.end.y - arrow.start.y, arrow.end.x - arrow.start.x);
+        const length = state.tileSize * 0.8;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.strokeStyle = '#f5e7a8';
+        ctx.lineWidth = Math.max(2, state.tileSize * 0.06);
+        ctx.shadowColor = 'rgba(255, 230, 130, 0.72)';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(-length / 2, 0);
+        ctx.lineTo(length / 2, 0);
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(length / 2 + 5, 0);
+        ctx.lineTo(length / 2 - 5, -4);
+        ctx.lineTo(length / 2 - 5, 4);
+        ctx.closePath();
+        ctx.fill();
         ctx.restore();
       }
     }
@@ -1744,36 +1878,169 @@ function App() {
       ctx.restore();
     }
 
+    function worldToScreen(point) {
+      return {
+        x: (point.x - state.camera.x) * state.camera.scale + state.canvasWidth / 2,
+        y: (point.y - state.camera.y) * state.camera.scale + state.canvasHeight / 2,
+      };
+    }
+
+    function drawFocusVignette() {
+      const amount = clamp((state.camera.scale - FOCUS_VIGNETTE_MIN_SCALE) / 0.75, 0, 1);
+      if (amount <= 0) {
+        return;
+      }
+
+      const focusActors = [...livingParty(), state.dragon].filter((actor) => actor.hp > 0);
+      if (focusActors.length === 0) {
+        return;
+      }
+
+      ctx.save();
+      ctx.fillStyle = `rgba(4, 8, 5, ${0.18 + amount * 0.36})`;
+      ctx.fillRect(0, 0, state.canvasWidth, state.canvasHeight);
+      ctx.globalCompositeOperation = 'destination-out';
+
+      for (const actor of focusActors) {
+        const point = worldToScreen(boardToWorld(actorScreenCell(actor)));
+        const radius = state.tileSize * state.camera.scale * (actor.id === 'dragon' ? 3.25 : 2.55);
+        const gradient = ctx.createRadialGradient(point.x, point.y, radius * 0.24, point.x, point.y, radius);
+        gradient.addColorStop(0, 'rgba(0, 0, 0, 0.95)');
+        gradient.addColorStop(0.56, 'rgba(0, 0, 0, 0.72)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function drawScreenBlurb() {
+      if (!state.screenBlurb) {
+        return;
+      }
+
+      const progress = clamp(state.screenBlurb.elapsed / state.screenBlurb.duration, 0, 1);
+      const alpha = progress < 0.72 ? 1 : 1 - (progress - 0.72) / 0.28;
+      const y = state.canvasHeight * 0.2 - Math.sin(progress * Math.PI) * 12;
+      const scale = 1 + Math.sin(progress * Math.PI) * 0.08;
+      const width = Math.min(360, state.canvasWidth - 80);
+      const height = 54;
+      const x = state.canvasWidth / 2 - width / 2;
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(state.canvasWidth / 2, y + height / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-state.canvasWidth / 2, -(y + height / 2));
+      ctx.fillStyle = 'rgba(42, 28, 10, 0.9)';
+      ctx.strokeStyle = '#ffd66b';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = 'rgba(255, 205, 67, 0.5)';
+      ctx.shadowBlur = 18;
+      ctx.fillRect(x, y, width, height);
+      ctx.strokeRect(x + 2, y + 2, width - 4, height - 4);
+      ctx.fillStyle = '#fff0a7';
+      ctx.font = '800 24px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(state.screenBlurb.text, state.canvasWidth / 2, y + height / 2 + 1);
+      ctx.restore();
+    }
+
+    function drawChestIndicator() {
+      if (state.chest.opened) {
+        return;
+      }
+
+      const chestPoint = worldToScreen(boardToWorld(chestCell()));
+      const margin = 42;
+      const visible =
+        chestPoint.x >= margin &&
+        chestPoint.x <= state.canvasWidth - margin &&
+        chestPoint.y >= margin &&
+        chestPoint.y <= state.canvasHeight - margin;
+
+      if (visible) {
+        return;
+      }
+
+      const center = { x: state.canvasWidth / 2, y: state.canvasHeight / 2 };
+      const dx = chestPoint.x - center.x;
+      const dy = chestPoint.y - center.y;
+      const angle = Math.atan2(dy, dx);
+      const x = clamp(chestPoint.x, margin, state.canvasWidth - margin);
+      const y = clamp(chestPoint.y, margin, state.canvasHeight - margin);
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = 'rgba(39, 30, 16, 0.9)';
+      ctx.strokeStyle = '#ffd66b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.rotate(angle);
+      ctx.fillStyle = '#ffd66b';
+      ctx.beginPath();
+      ctx.moveTo(30, 0);
+      ctx.lineTo(14, -8);
+      ctx.lineTo(14, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.rotate(-angle);
+      ctx.fillStyle = '#fff0a7';
+      ctx.font = '700 18px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('$', 0, 1);
+      ctx.restore();
+    }
+
     function drawHud() {
+      if (state.camera.manualZoom > 0.94) {
+        return;
+      }
+
       const status =
         state.phase === 'player_turn'
           ? 'Player Turn'
           : state.phase === 'hero_attacking'
             ? 'Hero Attack'
-            : state.phase === 'wizard_casting' || state.phase === 'fireball_flying'
+            : state.phase === 'wizard_casting' || state.phase === 'wizard_fireball_flying'
               ? 'Wizard Attack'
+              : state.phase === 'archer_attacking' || state.phase === 'arrow_flying'
+                ? 'Archer Attack'
               : state.phase === 'dragon_attacking'
                 ? 'Dragon Attack'
+                : state.phase === 'dragon_fireball_flying'
+                  ? 'Dragon Fireball'
                 : state.phase === 'dragon_turn' || state.phase === 'dragon_moving'
                   ? 'Dragon Turn'
+                  : state.phase === 'chest_opening'
+                    ? 'Bonus Chest'
                   : state.phase === 'victory'
                     ? 'Victory'
                     : state.phase === 'defeat'
                       ? 'Defeat'
                       : 'Moving';
-      const selected = state.selectedActor === 'wizard' ? 'Wizard' : 'Hero';
+      const selected = actorLabel(state.selectedActor);
 
       ctx.save();
-      ctx.fillStyle = 'rgba(10, 18, 12, 0.74)';
+      ctx.fillStyle = 'rgba(33, 23, 12, 0.82)';
+      ctx.strokeStyle = '#d8b65a';
+      ctx.lineWidth = 2;
       ctx.fillRect(state.boardOffsetX, 12, state.boardPixels, 34);
+      ctx.strokeRect(state.boardOffsetX, 12, state.boardPixels, 34);
       ctx.fillStyle = '#e6f0cd';
       ctx.font = '600 14px system-ui, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(
-        `${status} | ${selected} selected | Move: green path is valid, red path is out of range or blocked`,
-        state.boardOffsetX + 12,
-        34,
-      );
+      ctx.fillText(`${status} | ${selected} selected`, state.boardOffsetX + 12, 34);
       ctx.textAlign = 'right';
       ctx.fillText(
         `${state.lastAction} | Zoom ${Math.round(state.camera.manualZoom * 100)}%`,
@@ -1805,7 +2072,9 @@ function App() {
         !state.loaded.hero ||
         !state.loaded.dragon ||
         !state.loaded.wizard ||
-        !state.loaded.fireball
+        !state.loaded.fireball ||
+        !state.loaded.archer ||
+        !state.loaded.chest
       ) {
         renderLoading();
         return;
@@ -1842,19 +2111,26 @@ function App() {
         );
       }
 
-      const actors = [state.hero, state.wizard, state.dragon].sort((a, b) => a.y - b.y);
+      drawChest();
+
+      const actors = [state.hero, state.wizard, state.archer, state.dragon].sort((a, b) => a.y - b.y);
       for (const actor of actors) {
         if (actor.id === 'hero') drawHero();
         if (actor.id === 'wizard') drawWizard();
+        if (actor.id === 'archer') drawArcher();
         if (actor.id === 'dragon') drawDragon();
       }
       drawFireballs();
+      drawArrows();
       drawParticles();
       for (const actor of actors) {
         drawHealthBar(actor);
       }
 
       ctx.restore();
+      drawFocusVignette();
+      drawScreenBlurb();
+      drawChestIndicator();
       drawHud();
     }
 
@@ -1882,18 +2158,31 @@ function App() {
         rules: {
           hero_move_range: HERO_MOVE_RANGE,
           wizard_move_range: WIZARD_MOVE_RANGE,
+          archer_move_range: ARCHER_MOVE_RANGE,
           dragon_move_range: DRAGON_MOVE_RANGE,
           hero_attack_range: HERO_ATTACK_RANGE,
           wizard_attack_range: WIZARD_ATTACK_RANGE,
+          archer_attack_range: ARCHER_ATTACK_RANGE,
           dragon_attack_range: DRAGON_ATTACK_RANGE,
+          chest_open_range: CHEST_OPEN_RANGE,
           terrain_animation_speed_multiplier: TERRAIN_ANIMATION_SPEED,
         },
         camera: {
           auto_zoom_scale: Number(state.camera.scale.toFixed(2)),
           manual_zoom: Number(state.camera.manualZoom.toFixed(2)),
         },
+        aggro: state.aggro,
         active_attack: state.activeAttack,
         fireballs: state.fireballs.length,
+        arrows: state.arrows.length,
+        chest: {
+          col: state.chest.col,
+          row: state.chest.row,
+          opened: state.chest.opened,
+          opening: state.chest.opening,
+          bonus_round: state.chest.bonusRound,
+          included_in_auto_zoom: false,
+        },
         hero: {
           col: Number(state.hero.x.toFixed(2)),
           row: Number(state.hero.y.toFixed(2)),
@@ -1911,6 +2200,15 @@ function App() {
           hp: state.wizard.hp,
           moving: state.wizard.moving,
           queued_steps: state.wizard.path.length,
+        },
+        archer: {
+          col: Number(state.archer.x.toFixed(2)),
+          row: Number(state.archer.y.toFixed(2)),
+          cell_col: state.archer.col,
+          cell_row: state.archer.row,
+          hp: state.archer.hp,
+          moving: state.archer.moving,
+          queued_steps: state.archer.path.length,
         },
         dragon: {
           col: Number(state.dragon.x.toFixed(2)),
@@ -1962,12 +2260,22 @@ function App() {
       state.loaded.fireball = true;
       render();
     };
+    archerImage.onload = () => {
+      state.loaded.archer = true;
+      render();
+    };
+    chestImage.onload = () => {
+      state.loaded.chest = true;
+      render();
+    };
     grassImage.onerror = () => console.error('Failed to load grass_tile_waving.png');
     waterImage.onerror = () => console.error('Failed to load zsprite_sheet.png');
     heroImage.onerror = () => console.error('Failed to load hero_attacking.png');
     dragonImage.onerror = () => console.error('Failed to load DRAGON_zsprite_sheet.png');
     wizardImage.onerror = () => console.error('Failed to load wizard.png');
     fireballImage.onerror = () => console.error('Failed to load fireball.png');
+    archerImage.onerror = () => console.error('Failed to load archer.png');
+    chestImage.onerror = () => console.error('Failed to load chest.png');
 
     resize();
     state.animationFrame = requestAnimationFrame(frame);

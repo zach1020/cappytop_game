@@ -39,7 +39,7 @@ main {
   grid-template-rows: auto minmax(0, 1fr) auto;
   justify-items: center;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   max-width: 980px;
   max-height: 100%;
   width: 100%;
@@ -48,7 +48,7 @@ main {
 canvas {
   display: block;
   max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 172px);
+  max-height: calc(100vh - 220px);
   cursor: pointer;
   image-rendering: auto;
   touch-action: none;
@@ -73,6 +73,8 @@ canvas {
   font-size: 13px;
   line-height: 1.25;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  position: relative;
+  z-index: 2;
 }
 
 .credit-plug a {
@@ -186,7 +188,7 @@ canvas {
 
   canvas {
     max-width: calc(100vw - 32px);
-    max-height: calc(100vh - 210px);
+    max-height: calc(100vh - 248px);
   }
 
   .credit-plug {
@@ -198,5 +200,15 @@ canvas {
   .music-player {
     width: min(100%, 420px);
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 720px) {
+  .credit-plug {
+    display: none;
+  }
+
+  canvas {
+    max-height: calc(100vh - 126px);
   }
 }

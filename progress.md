@@ -7,6 +7,7 @@ Updates:
 - Added `zsprite_sheet.png` water terrain to the board. Water uses the same 584px frame grid, animates independently, and is treated as blocked terrain for click movement/pathfinding.
 - Expanded the board to 19x19, slowed grass/water animation to 50% speed, added the dragon sprite as a blocking board occupant, and implemented a hero/dragon turn loop. Hero can move up to 5 squares or attack the dragon within 2 squares; dragon attacks within 2 squares or moves up to 5 squares toward the hero.
 - Ran `npm run build`; build completed successfully after the turn-system changes.
+- Added sprite-sheet attack playback for hero/dragon, auto/manual camera zoom, a bottom pixel-styled music player with four WAV tracks, and enlarged hover tiles that float above the board. Hero rendering now disappears at 0 HP.
 
 TODO:
-- Restart the dev server cleanly and run Playwright checks for 19x19 rendering, blocked dragon/water clicks, hero movement turns, and dragon AI turns.
+- Run final build and browser screenshot/state checks after the latest hover/music/camera/attack updates.

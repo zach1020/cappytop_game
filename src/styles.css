@@ -36,17 +36,19 @@ main {
 
 .game-shell {
   display: grid;
-  grid-template-columns: minmax(420px, 1fr) 220px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
   align-items: center;
-  gap: 18px;
-  max-width: 1218px;
+  gap: 12px;
+  max-width: 980px;
+  max-height: 100%;
   width: 100%;
 }
 
 canvas {
   display: block;
-  max-width: min(calc(100vw - 286px), calc(100vh - 32px));
-  max-height: calc(100vh - 32px);
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 126px);
   cursor: pointer;
   image-rendering: auto;
   touch-action: none;
@@ -55,8 +57,13 @@ canvas {
 }
 
 .music-player {
-  width: 220px;
-  padding: 14px;
+  width: min(760px, calc(100vw - 32px));
+  min-height: 82px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(160px, 220px);
+  align-items: center;
+  gap: 14px;
   color: #d8f0c4;
   background: #162116;
   border: 3px solid #4f6c39;
@@ -67,7 +74,7 @@ canvas {
 }
 
 .player-screen {
-  min-height: 78px;
+  min-height: 54px;
   padding: 10px;
   display: flex;
   flex-direction: column;
@@ -93,7 +100,7 @@ canvas {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  margin-top: 12px;
+  min-width: 144px;
 }
 
 .player-buttons button {
@@ -115,7 +122,6 @@ canvas {
 .volume-control {
   display: grid;
   gap: 8px;
-  margin-top: 14px;
   font-size: 12px;
 }
 
@@ -131,6 +137,7 @@ canvas {
 
   .game-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
     justify-items: center;
   }
 
@@ -141,5 +148,6 @@ canvas {
 
   .music-player {
     width: min(100%, 420px);
+    grid-template-columns: 1fr;
   }
 }

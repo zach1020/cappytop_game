@@ -28,26 +28,43 @@ const FIREBALL_FRAME_HEIGHT = 458;
 const FIREBALL_COLUMNS = 6;
 const FIREBALL_FRAMES = 18;
 const FIREBALL_FPS = 18;
+const ARCHER_FRAME_WIDTH = 502;
+const ARCHER_FRAME_HEIGHT = 420;
+const ARCHER_COLUMNS = 6;
+const ARCHER_ATTACK_FRAMES = 18;
+const ARCHER_ATTACK_FPS = 14;
+const CHEST_FRAME_WIDTH = 584;
+const CHEST_FRAME_HEIGHT = 564;
+const CHEST_COLUMNS = 6;
+const CHEST_FRAMES = 37;
+const CHEST_FPS = 12;
 
 const HERO_MOVE_SPEED = 4.2;
 const WIZARD_MOVE_SPEED = 4;
+const ARCHER_MOVE_SPEED = 4.1;
 const DRAGON_MOVE_SPEED = 3.4;
 const TERRAIN_ANIMATION_SPEED = 0.5;
 const HERO_MOVE_RANGE = 5;
 const WIZARD_MOVE_RANGE = 5;
+const ARCHER_MOVE_RANGE = 5;
 const DRAGON_MOVE_RANGE = 5;
 const HERO_ATTACK_RANGE = 2;
 const WIZARD_ATTACK_RANGE = 8;
-const DRAGON_ATTACK_RANGE = 2;
+const ARCHER_ATTACK_RANGE = 7;
+const DRAGON_ATTACK_RANGE = 7;
+const CHEST_OPEN_RANGE = 2;
 const HERO_ATTACK_DAMAGE = 5;
 const WIZARD_ATTACK_DAMAGE = 4;
+const ARCHER_ATTACK_DAMAGE = 4;
 const DRAGON_ATTACK_DAMAGE = 3;
 const MIN_MANUAL_ZOOM = 0.6;
 const MAX_MANUAL_ZOOM = 1.75;
 
 const INITIAL_HERO_CELL = { col: 5, row: 9 };
 const INITIAL_WIZARD_CELL = { col: 4, row: 10 };
+const INITIAL_ARCHER_CELL = { col: 6, row: 10 };
 const INITIAL_DRAGON_CELL = { col: 14, row: 14 };
+const CHEST_CELL = { col: 17, row: 18 };
 
 const TRACKS = [
   { title: 'Cabbage Carousel', file: '__Cabbage Carousel__.wav' },
@@ -238,6 +255,7 @@ function App() {
   const [currentTrack, setCurrentTrack] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [rewindCount, setRewindCount] = useState(0);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -280,6 +298,10 @@ function App() {
     setIsPlaying(true);
   }
 
+  function rewindTurnFromUi() {
+    window.rewind_turn?.();
+  }
+
   const track = TRACKS[currentTrack];
 
   useEffect(() => {
@@ -291,6 +313,8 @@ function App() {
     const dragonImage = loadImage('/DRAGON_zsprite_sheet.png');
     const wizardImage = loadImage('/wizard.png');
     const fireballImage = loadImage('/fireball.png');
+    const archerImage = loadImage('/archer.png');
+    const chestImage = loadImage('/chest.png');
     const boardTiles = createBoardTiles();
 
     const state = {
@@ -308,10 +332,13 @@ function App() {
       attackPulse: null,
       activeAttack: null,
       fireballs: [],
+      arrows: [],
       particles: [],
       selectedActor: 'hero',
-      acted: { hero: false, wizard: false },
+      acted: { hero: false, wizard: false, archer: false },
+      aggro: { hero: 0, wizard: 0, archer: 0 },
       activePathHighlight: null,
+      history: [],
       camera: {
         x: 480,
         y: 480,
@@ -345,6 +372,18 @@ function App() {
         path: [],
         moving: false,
       },
+      archer: {
+        id: 'archer',
+        col: INITIAL_ARCHER_CELL.col,
+        row: INITIAL_ARCHER_CELL.row,
+        x: INITIAL_ARCHER_CELL.col,
+        y: INITIAL_ARCHER_CELL.row,
+        hp: 20,
+        maxHp: 20,
+        target: null,
+        path: [],
+        moving: false,
+      },
       dragon: {
         id: 'dragon',
         col: INITIAL_DRAGON_CELL.col,
@@ -357,6 +396,15 @@ function App() {
         path: [],
         moving: false,
       },
+      chest: {
+        col: CHEST_CELL.col,
+        row: CHEST_CELL.row,
+        opened: false,
+        opening: false,
+        elapsed: 0,
+        bonusRound: null,
+        opener: null,
+      },
       hoverCell: null,
       lastClickCell: null,
       blockedClickCell: null,
@@ -367,6 +415,8 @@ function App() {
         dragon: false,
         wizard: false,
         fireball: false,
+        archer: false,
+        chest: false,
       },
     };
 
@@ -388,16 +438,56 @@ function App() {
       return actorCell(state.wizard);
     }
 
+    function archerCell() {
+      return actorCell(state.archer);
+    }
+
     function dragonCell() {
       return actorCell(state.dragon);
     }
 
+    function chestCell() {
+      return { col: state.chest.col, row: state.chest.row };
+    }
+
+    function partyActors() {
+      return [state.hero, state.wizard, state.archer];
+    }
+
     function livingParty() {
-      return [state.hero, state.wizard].filter((actor) => actor.hp > 0);
+      return partyActors().filter((actor) => actor.hp > 0);
+    }
+
+    function actorLabel(id) {
+      if (id === 'hero') return 'Hero';
+      if (id === 'wizard') return 'Wizard';
+      if (id === 'archer') return 'Archer';
+      if (id === 'dragon') return 'Dragon';
+      return 'Character';
+    }
+
+    function actorById(id) {
+      if (id === 'hero') return state.hero;
+      if (id === 'wizard') return state.wizard;
+      if (id === 'archer') return state.archer;
+      if (id === 'dragon') return state.dragon;
+      return null;
+    }
+
+    function moveRangeFor(actor) {
+      if (actor.id === 'wizard') return WIZARD_MOVE_RANGE;
+      if (actor.id === 'archer') return ARCHER_MOVE_RANGE;
+      return HERO_MOVE_RANGE;
+    }
+
+    function attackRangeFor(actor) {
+      if (actor.id === 'wizard') return WIZARD_ATTACK_RANGE;
+      if (actor.id === 'archer') return ARCHER_ATTACK_RANGE;
+      return HERO_ATTACK_RANGE;
     }
 
     function selectedActor() {
-      const actor = state.selectedActor === 'wizard' ? state.wizard : state.hero;
+      const actor = actorById(state.selectedActor) || state.hero;
       if (actor.hp > 0) {
         return actor;
       }
@@ -413,12 +503,16 @@ function App() {
     }
 
     function actorAtCell(cell) {
-      for (const actor of [state.hero, state.wizard, state.dragon]) {
+      for (const actor of [...partyActors(), state.dragon]) {
         if (actor.hp > 0 && actor.col === cell.col && actor.row === cell.row) {
           return actor;
         }
       }
       return null;
+    }
+
+    function isChestCell(cell) {
+      return cellKey(cell) === cellKey(chestCell());
     }
 
     function boardToWorld(cell) {
@@ -437,7 +531,7 @@ function App() {
 
     function occupiedKeysFor(actorId, includeDragon = true) {
       const keys = new Set();
-      for (const actor of [state.hero, state.wizard]) {
+      for (const actor of partyActors()) {
         if (actor.hp > 0 && actor.id !== actorId) {
           keys.add(cellKey(actorCell(actor)));
         }
@@ -445,6 +539,7 @@ function App() {
       if (includeDragon && state.dragon.hp > 0 && actorId !== 'dragon') {
         keys.add(cellKey(dragonCell()));
       }
+      keys.add(cellKey(chestCell()));
       return keys;
     }
 
@@ -512,6 +607,10 @@ function App() {
         }
       }
 
+      if (state.archer.hp > 0) {
+        points.push(boardToWorld(actorScreenCell(state.archer)));
+      }
+
       if (points.length === 0) {
         return;
       }
@@ -546,6 +645,81 @@ function App() {
       return livingParty().map((actor) => actor.id);
     }
 
+    function snapshotActor(actor) {
+      return {
+        col: actor.col,
+        row: actor.row,
+        x: actor.col,
+        y: actor.row,
+        hp: actor.hp,
+        target: null,
+        path: [],
+        moving: false,
+      };
+    }
+
+    function makeSnapshot(label) {
+      return {
+        label,
+        phase: state.phase,
+        round: state.round,
+        lastAction: state.lastAction,
+        selectedActor: state.selectedActor,
+        acted: { ...state.acted },
+        aggro: { ...state.aggro },
+        hero: snapshotActor(state.hero),
+        wizard: snapshotActor(state.wizard),
+        archer: snapshotActor(state.archer),
+        dragon: snapshotActor(state.dragon),
+        chest: { ...state.chest },
+      };
+    }
+
+    function pushHistory(label) {
+      state.history = [...state.history, makeSnapshot(label)].slice(-3);
+      setRewindCount(state.history.length);
+    }
+
+    function restoreActor(actor, snapshot) {
+      Object.assign(actor, snapshot, {
+        target: null,
+        path: [],
+        moving: false,
+      });
+    }
+
+    function rewindTurn() {
+      const snapshot = state.history.pop();
+      if (!snapshot) {
+        return;
+      }
+
+      state.phase = snapshot.phase;
+      state.round = snapshot.round;
+      state.lastAction = `Rewound: ${snapshot.label}`;
+      state.selectedActor = snapshot.selectedActor;
+      state.acted = { ...snapshot.acted };
+      state.aggro = { ...snapshot.aggro };
+      restoreActor(state.hero, snapshot.hero);
+      restoreActor(state.wizard, snapshot.wizard);
+      restoreActor(state.archer, snapshot.archer);
+      restoreActor(state.dragon, snapshot.dragon);
+      state.chest = { ...snapshot.chest };
+      state.aiDelay = 0;
+      state.attackPulse = null;
+      state.activeAttack = null;
+      state.fireballs = [];
+      state.arrows = [];
+      state.particles = [];
+      state.activePathHighlight = null;
+      state.blockedClickCell = null;
+      state.lastClickCell = null;
+      setRewindCount(state.history.length);
+      render();
+    }
+
+    window.rewind_turn = rewindTurn;
+
     function hasEveryoneActed() {
       const ids = livingActionIds();
       return ids.length === 0 || ids.every((id) => state.acted[id]);
@@ -555,6 +729,7 @@ function App() {
       if (state.phase === 'victory' || state.phase === 'defeat') {
         return;
       }
+      pushHistory(`Round ${state.round} dragon turn`);
       state.phase = 'dragon_turn';
       state.aiDelay = 0.35;
       state.activePathHighlight = null;
@@ -565,10 +740,15 @@ function App() {
       if (state.phase === 'victory' || state.phase === 'defeat') {
         return;
       }
+      pushHistory(`Round ${state.round + 1} player turn`);
       state.phase = 'player_turn';
       state.round += 1;
-      state.acted = { hero: state.hero.hp <= 0, wizard: state.wizard.hp <= 0 };
-      state.selectedActor = state.hero.hp > 0 ? 'hero' : 'wizard';
+      state.acted = {
+        hero: state.hero.hp <= 0,
+        wizard: state.wizard.hp <= 0,
+        archer: state.archer.hp <= 0,
+      };
+      state.selectedActor = livingParty()[0]?.id || 'hero';
       state.activePathHighlight = null;
       state.lastAction = 'Player turn';
     }
@@ -586,7 +766,7 @@ function App() {
       const next = livingParty().find((actor) => !state.acted[actor.id]);
       if (next) {
         state.selectedActor = next.id;
-        state.lastAction = `${next.id === 'hero' ? 'Hero' : 'Wizard'} ready`;
+        state.lastAction = `${actorLabel(next.id)} ready`;
       }
     }
 
@@ -620,19 +800,56 @@ function App() {
       state.blockedClickCell = null;
     }
 
-    function launchFireball() {
-      const start = boardToWorld(actorScreenCell(state.wizard));
-      const end = boardToWorld(actorScreenCell(state.dragon));
+    function startArcherAttack() {
+      state.phase = 'archer_attacking';
+      state.activeAttack = {
+        actor: 'archer',
+        target: 'dragon',
+        elapsed: 0,
+        duration: ARCHER_ATTACK_FRAMES / ARCHER_ATTACK_FPS,
+        damage: ARCHER_ATTACK_DAMAGE,
+        applied: false,
+      };
+      state.lastAction = 'Archer fires';
+      state.lastClickCell = dragonCell();
+      state.blockedClickCell = null;
+    }
+
+    function launchFireball(owner, targetId, damage) {
+      const ownerActor = actorById(owner);
+      const targetActor = actorById(targetId);
+      if (!ownerActor || !targetActor) {
+        return;
+      }
+      const start = boardToWorld(actorScreenCell(ownerActor));
+      const end = boardToWorld(actorScreenCell(targetActor));
       state.fireballs.push({
+        owner,
+        target: targetId,
         start,
         end,
         elapsed: 0,
         duration: 0.62,
-        damage: WIZARD_ATTACK_DAMAGE,
+        damage,
       });
-      state.phase = 'fireball_flying';
+      state.phase = `${owner}_fireball_flying`;
       state.activeAttack = null;
-      state.lastAction = 'Fireball flies';
+      state.lastAction = `${actorLabel(owner)} fireball flies`;
+    }
+
+    function launchArrow() {
+      const start = boardToWorld(actorScreenCell(state.archer));
+      const end = boardToWorld(actorScreenCell(state.dragon));
+      state.arrows.push({
+        start,
+        end,
+        elapsed: 0,
+        duration: 0.48,
+        damage: ARCHER_ATTACK_DAMAGE,
+      });
+      state.phase = 'arrow_flying';
+      state.activeAttack = null;
+      state.lastAction = 'Arrow flies';
     }
 
     function startDragonAttack(targetId) {
@@ -676,15 +893,18 @@ function App() {
 
       if (state.activeAttack.target === 'dragon') {
         state.dragon.hp = Math.max(0, state.dragon.hp - state.activeAttack.damage);
+        state.aggro[state.activeAttack.actor] =
+          (state.aggro[state.activeAttack.actor] || 0) + state.activeAttack.damage + 2;
         state.attackPulse = { cell: dragonCell(), time: 0.35, color: 'rgba(255, 235, 116, 0.82)' };
-        spawnSparks(dragonCell(), state.activeAttack.actor === 'wizard' ? '#ffd84d' : '#ffe45f');
-        state.lastAction = `${state.activeAttack.actor === 'hero' ? 'Hero' : 'Wizard'} hits dragon`;
+        spawnSparks(dragonCell(), '#ffe45f');
+        state.lastAction = `${actorLabel(state.activeAttack.actor)} hits dragon`;
       } else {
-        const target = state.activeAttack.target === 'wizard' ? state.wizard : state.hero;
+        const target = actorById(state.activeAttack.target);
+        if (!target) return;
         target.hp = Math.max(0, target.hp - state.activeAttack.damage);
         state.attackPulse = { cell: actorCell(target), time: 0.35, color: 'rgba(255, 97, 86, 0.86)' };
         spawnSparks(actorCell(target), '#ff3d2e');
-        state.lastAction = `Dragon hits ${state.activeAttack.target}`;
+        state.lastAction = `Dragon hits ${actorLabel(state.activeAttack.target)}`;
       }
     }
 
@@ -702,7 +922,7 @@ function App() {
         return;
       }
 
-      if (state.hero.hp <= 0 && state.wizard.hp <= 0) {
+      if (livingParty().length === 0) {
         state.phase = 'defeat';
         state.lastAction = 'Party defeated';
         return;
@@ -710,6 +930,8 @@ function App() {
 
       if (actor === 'hero') {
         finishPlayerActorAction('hero');
+      } else if (actor === 'archer') {
+        finishPlayerActorAction('archer');
       } else if (actor === 'dragon') {
         beginPlayerTurn();
       }
@@ -726,7 +948,7 @@ function App() {
 
       const path = findPath(actorCell(actor), cell, occupiedKeysFor(actor.id, true));
       const sameCell = cellKey(actorCell(actor)) === cellKey(cell);
-      const range = actor.id === 'wizard' ? WIZARD_MOVE_RANGE : HERO_MOVE_RANGE;
+      const range = moveRangeFor(actor);
 
       if (!sameCell && path.length === 0) {
         return { valid: false, path: [], label: 'No path' };
@@ -751,13 +973,21 @@ function App() {
 
       const occupant = actorAtCell(cell);
       if (occupant?.id === 'dragon') {
-        const range = actor.id === 'wizard' ? WIZARD_ATTACK_RANGE : HERO_ATTACK_RANGE;
+        const range = attackRangeFor(actor);
         const valid = gridDistance(actorCell(actor), dragonCell()) <= range;
         return { type: 'attack', valid, path: [dragonCell()], label: valid ? 'Attack in range' : 'Attack out of range' };
       }
 
       if (occupant && occupant.id !== actor.id) {
         return { type: 'blocked', valid: false, path: [cell], label: 'Occupied' };
+      }
+
+      if (!state.chest.opened && isChestCell(cell)) {
+        const valid =
+          state.dragon.hp > 0 &&
+          livingParty().length > 0 &&
+          gridDistance(actorCell(actor), chestCell()) <= CHEST_OPEN_RANGE;
+        return { type: 'open_chest', valid, path: [chestCell()], label: valid ? 'Open chest' : 'Chest out of range' };
       }
 
       return { type: 'move', ...computeMovePlan(actor, cell) };
@@ -769,9 +999,9 @@ function App() {
       }
 
       const occupant = actorAtCell(cell);
-      if (occupant?.id === 'hero' || occupant?.id === 'wizard') {
+      if (occupant?.id === 'hero' || occupant?.id === 'wizard' || occupant?.id === 'archer') {
         state.selectedActor = occupant.id;
-        state.lastAction = `${occupant.id === 'hero' ? 'Hero' : 'Wizard'} selected`;
+        state.lastAction = `${actorLabel(occupant.id)} selected`;
         render();
         return;
       }
@@ -783,16 +1013,39 @@ function App() {
       }
 
       if (occupant?.id === 'dragon') {
-        const range = actor.id === 'wizard' ? WIZARD_ATTACK_RANGE : HERO_ATTACK_RANGE;
+        const range = attackRangeFor(actor);
         if (gridDistance(actorCell(actor), dragonCell()) > range) {
           setBlockedClick(cell, 'Attack out of range');
           return;
         }
         if (actor.id === 'wizard') {
           startWizardAttack();
+        } else if (actor.id === 'archer') {
+          startArcherAttack();
         } else {
           startHeroAttack();
         }
+        return;
+      }
+
+      if (!state.chest.opened && isChestCell(cell)) {
+        if (state.dragon.hp <= 0 || livingParty().length === 0) {
+          setBlockedClick(cell, 'Chest is locked after battle');
+          return;
+        }
+        if (gridDistance(actorCell(actor), chestCell()) > CHEST_OPEN_RANGE) {
+          setBlockedClick(cell, 'Chest out of range');
+          return;
+        }
+        state.phase = 'chest_opening';
+        state.chest.opened = true;
+        state.chest.opening = true;
+        state.chest.elapsed = 0;
+        state.chest.bonusRound = state.round;
+        state.chest.opener = actor.id;
+        state.lastClickCell = chestCell();
+        state.blockedClickCell = null;
+        state.lastAction = `${actorLabel(actor.id)} opens bonus chest`;
         return;
       }
 
@@ -812,21 +1065,30 @@ function App() {
       state.lastAction = plan.label;
 
       if (actor.moving) {
-        state.phase = actor.id === 'wizard' ? 'wizard_moving' : 'hero_moving';
+        state.phase = `${actor.id}_moving`;
       } else {
         finishPlayerActorAction(actor.id);
       }
     }
 
-    function nearestPartyTarget() {
-      let best = null;
-      for (const actor of livingParty()) {
-        const distance = gridDistance(dragonCell(), actorCell(actor));
-        if (!best || distance < best.distance) {
-          best = { actor, distance };
-        }
+    function chooseDragonTarget() {
+      const targets = livingParty();
+      if (targets.length === 0) {
+        return null;
       }
-      return best;
+
+      return targets
+        .map((actor) => ({
+          actor,
+          distance: gridDistance(dragonCell(), actorCell(actor)),
+          aggro: state.aggro[actor.id] || 0,
+          hpRatio: actor.hp / actor.maxHp,
+        }))
+        .sort((a, b) => {
+          if (b.aggro !== a.aggro) return b.aggro - a.aggro;
+          if (a.hpRatio !== b.hpRatio) return a.hpRatio - b.hpRatio;
+          return a.distance - b.distance;
+        })[0];
     }
 
     function chooseDragonMove(target) {
@@ -846,19 +1108,19 @@ function App() {
     }
 
     function dragonAct() {
-      const nearest = nearestPartyTarget();
-      if (!nearest) {
+      const target = chooseDragonTarget();
+      if (!target) {
         state.phase = 'defeat';
         state.lastAction = 'Party defeated';
         return;
       }
 
-      if (nearest.distance <= DRAGON_ATTACK_RANGE) {
-        startDragonAttack(nearest.actor.id);
+      if (target.distance <= DRAGON_ATTACK_RANGE) {
+        startDragonAttack(target.actor.id);
         return;
       }
 
-      const move = chooseDragonMove(nearest.actor);
+      const move = chooseDragonMove(target.actor);
       if (!move || move.path.length === 0) {
         state.lastAction = 'Dragon waits';
         beginPlayerTurn();
@@ -949,20 +1211,64 @@ function App() {
         fireball.elapsed += dt;
       }
 
-      const hit = state.fireballs.find((fireball) => fireball.elapsed >= fireball.duration);
+      const hits = state.fireballs.filter((fireball) => fireball.elapsed >= fireball.duration);
       state.fireballs = state.fireballs.filter((fireball) => fireball.elapsed < fireball.duration);
 
-      if (hit) {
+      for (const hit of hits) {
+        const target = actorById(hit.target);
+        if (!target || target.hp <= 0) {
+          continue;
+        }
+
+        target.hp = Math.max(0, target.hp - hit.damage);
+
+        if (hit.target === 'dragon') {
+          state.aggro[hit.owner] = (state.aggro[hit.owner] || 0) + hit.damage + 1;
+          state.attackPulse = { cell: dragonCell(), time: 0.35, color: 'rgba(255, 174, 56, 0.9)' };
+          spawnSparks(dragonCell(), '#ffd84d');
+          state.lastAction = `${actorLabel(hit.owner)} hits dragon for ${hit.damage}`;
+
+          if (state.dragon.hp <= 0) {
+            state.phase = 'victory';
+            state.lastAction = 'Dragon defeated';
+          } else {
+            finishPlayerActorAction(hit.owner);
+          }
+        } else {
+          state.attackPulse = { cell: actorCell(target), time: 0.35, color: 'rgba(255, 97, 86, 0.86)' };
+          spawnSparks(actorCell(target), '#ff3d2e');
+          state.lastAction = `Dragon fireball hits ${actorLabel(hit.target)}`;
+
+          if (livingParty().length === 0) {
+            state.phase = 'defeat';
+            state.lastAction = 'Party defeated';
+          } else {
+            beginPlayerTurn();
+          }
+        }
+      }
+    }
+
+    function updateArrows(dt) {
+      for (const arrow of state.arrows) {
+        arrow.elapsed += dt;
+      }
+
+      const hits = state.arrows.filter((arrow) => arrow.elapsed >= arrow.duration);
+      state.arrows = state.arrows.filter((arrow) => arrow.elapsed < arrow.duration);
+
+      for (const hit of hits) {
         state.dragon.hp = Math.max(0, state.dragon.hp - hit.damage);
-        state.attackPulse = { cell: dragonCell(), time: 0.35, color: 'rgba(255, 174, 56, 0.9)' };
-        spawnSparks(dragonCell(), '#ffd84d');
-        state.lastAction = `Wizard hits dragon for ${hit.damage}`;
+        state.aggro.archer = (state.aggro.archer || 0) + hit.damage + 1;
+        state.attackPulse = { cell: dragonCell(), time: 0.35, color: 'rgba(255, 235, 116, 0.84)' };
+        spawnSparks(dragonCell(), '#ffe45f');
+        state.lastAction = `Archer hits dragon for ${hit.damage}`;
 
         if (state.dragon.hp <= 0) {
           state.phase = 'victory';
           state.lastAction = 'Dragon defeated';
         } else {
-          finishPlayerActorAction('wizard');
+          finishPlayerActorAction('archer');
         }
       }
     }
@@ -989,7 +1295,7 @@ function App() {
         }
       }
 
-      if (state.phase === 'hero_attacking' || state.phase === 'dragon_attacking') {
+      if (state.phase === 'hero_attacking') {
         state.activeAttack.elapsed += dt;
         if (state.activeAttack.elapsed >= state.activeAttack.duration * 0.55) {
           applyAttackDamage();
@@ -1000,13 +1306,26 @@ function App() {
           }
           finishAttack();
         }
+      } else if (state.phase === 'dragon_attacking') {
+        state.activeAttack.elapsed += dt;
+        if (state.activeAttack.elapsed >= state.activeAttack.duration) {
+          const targetId = state.activeAttack.target;
+          launchFireball('dragon', targetId, DRAGON_ATTACK_DAMAGE);
+        }
       } else if (state.phase === 'wizard_casting') {
         state.activeAttack.elapsed += dt;
         if (state.activeAttack.elapsed >= state.activeAttack.duration) {
-          launchFireball();
+          launchFireball('wizard', 'dragon', WIZARD_ATTACK_DAMAGE);
         }
-      } else if (state.phase === 'fireball_flying') {
+      } else if (state.phase === 'archer_attacking') {
+        state.activeAttack.elapsed += dt;
+        if (state.activeAttack.elapsed >= state.activeAttack.duration) {
+          launchArrow();
+        }
+      } else if (state.phase === 'wizard_fireball_flying' || state.phase === 'dragon_fireball_flying') {
         updateFireballs(dt);
+      } else if (state.phase === 'arrow_flying') {
+        updateArrows(dt);
       } else if (state.phase === 'hero_moving') {
         const finished = updateMover(state.hero, dt, HERO_MOVE_SPEED);
         if (finished) {
@@ -1016,6 +1335,11 @@ function App() {
         const finished = updateMover(state.wizard, dt, WIZARD_MOVE_SPEED);
         if (finished) {
           finishPlayerActorAction('wizard');
+        }
+      } else if (state.phase === 'archer_moving') {
+        const finished = updateMover(state.archer, dt, ARCHER_MOVE_SPEED);
+        if (finished) {
+          finishPlayerActorAction('archer');
         }
       } else if (state.phase === 'dragon_turn') {
         state.aiDelay -= dt;
@@ -1028,6 +1352,12 @@ function App() {
           state.activePathHighlight = null;
           beginPlayerTurn();
         }
+      } else if (state.phase === 'chest_opening') {
+        state.chest.elapsed += dt;
+        if (state.chest.elapsed >= CHEST_FRAMES / CHEST_FPS) {
+          state.chest.opening = false;
+          finishPlayerActorAction(state.chest.opener);
+        }
       }
 
       if (state.hero.hp <= 0) {
@@ -1035,6 +1365,9 @@ function App() {
       }
       if (state.wizard.hp <= 0) {
         state.acted.wizard = true;
+      }
+      if (state.archer.hp <= 0) {
+        state.acted.archer = true;
       }
     }
 
@@ -1161,7 +1494,7 @@ function App() {
       if (isPartyTurn()) {
         const actor = selectedActor();
         if (actor && !state.acted[actor.id]) {
-          const range = actor.id === 'wizard' ? WIZARD_MOVE_RANGE : HERO_MOVE_RANGE;
+          const range = moveRangeFor(actor);
           for (const option of findReachableCells(actorCell(actor), range, occupiedKeysFor(actor.id, true))) {
             drawCellHighlight(option.cell, 'rgba(189, 231, 122, 0.08)', null);
           }
@@ -1192,6 +1525,9 @@ function App() {
       drawActorCellOutline(selectedActor(), 'rgba(120, 218, 255, 0.82)');
       if (state.hoverCell && state.dragon.hp > 0 && cellKey(state.hoverCell) === cellKey(dragonCell())) {
         drawActorCellOutline(state.dragon, 'rgba(255, 232, 96, 0.95)');
+      }
+      if (!state.chest.opened) {
+        drawCellHighlight(chestCell(), null, 'rgba(255, 216, 96, 0.58)', 4);
       }
     }
 
@@ -1434,7 +1770,7 @@ function App() {
       ctx.font = '600 14px system-ui, sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(
-        `${status} | ${selected} selected | Hero ${state.hero.hp}/${state.hero.maxHp} | Wizard ${state.wizard.hp}/${state.wizard.maxHp} | Dragon ${state.dragon.hp}/${state.dragon.maxHp}`,
+        `${status} | ${selected} selected | Move: green path is valid, red path is out of range or blocked`,
         state.boardOffsetX + 12,
         34,
       );
@@ -1513,6 +1849,10 @@ function App() {
         if (actor.id === 'dragon') drawDragon();
       }
       drawFireballs();
+      drawParticles();
+      for (const actor of actors) {
+        drawHealthBar(actor);
+      }
 
       ctx.restore();
       drawHud();
@@ -1537,6 +1877,7 @@ function App() {
         round: state.round,
         selected_actor: state.selectedActor,
         acted: state.acted,
+        rewind_snapshots: state.history.length,
         last_action: state.lastAction,
         rules: {
           hero_move_range: HERO_MOVE_RANGE,
@@ -1647,12 +1988,21 @@ function App() {
       window.removeEventListener('keydown', onKeyDown);
       delete window.render_game_to_text;
       delete window.advanceTime;
+      delete window.rewind_turn;
     };
   }, []);
 
   return (
     <main>
       <section className="game-shell">
+        <header className="credit-plug">
+          <span>
+            <strong className="gold-word">Made by Cappy (Zach)</strong> · <a href="https://zachbohl.com" target="_blank" rel="noreferrer">zachbohl.com</a>
+          </span>
+          <span>
+            The <strong className="magic-word">whole thing</strong>, yes, the <strong className="danger-word">ENTIRE THING INCLUDING ASSETS</strong>, was <strong className="magic-word">vibe coded</strong>.
+          </span>
+        </header>
         <canvas ref={canvasRef} aria-label="19 by 19 turn-based RPG board" />
         <aside className="music-player" aria-label="Music player">
           <audio
@@ -1671,6 +2021,9 @@ function App() {
             </button>
             <button type="button" onClick={skipTrack}>
               Skip
+            </button>
+            <button type="button" onClick={rewindTurnFromUi} disabled={rewindCount === 0}>
+              Rewind {rewindCount}
             </button>
           </div>
           <label className="volume-control">

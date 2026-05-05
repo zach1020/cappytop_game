@@ -1,0 +1,1 @@
+{"coordinate_system":"16x16 board, origin at top-left, col increases right, row increases down","board":{"columns":16,"rows":16},"hero":{"col":12,"row":5,"cell_col":12,"cell_row":5,"moving":false,"target":null,"queued_steps":0},"hover_cell":{"col":12,"row":5},"selected_cell":{"col":12,"row":5},"grass":{"animated":true,"frames":19,"independent_offsets":true}}

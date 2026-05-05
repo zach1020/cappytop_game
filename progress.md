@@ -35,3 +35,4 @@ TODO:
 - Added an optional second playthrough unlock: if the campaign is cleared after opening all stage chests, a green dragon joins the party with huge movement, strong defense, and ranged/physical attacks.
 - Chest terrain is normalized at board creation so every chest cell renders as grass, fixing chest-on-water placements.
 - Moved `The Green Dragon of Yore.wav` into `public/` and added it as a bonus music-player track that unlocks with the green dragon, with an in-player unlock notice.
+- Moved the chest skill-up chooser into a fixed, high-z-index modal centered over the game so it appears above the canvas instead of inside the lower music panel.

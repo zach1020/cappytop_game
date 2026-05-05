@@ -3168,6 +3168,28 @@ function App() {
               <strong>Second Run</strong>
             </button>
           )}
+          {pendingBuffChoice && (
+            <div className="skillup-overlay" role="dialog" aria-modal="true" aria-label="Permanent chest buff">
+              <div className="buff-picker">
+                <strong>Chest {pendingBuffChoice.chestNumber}: choose a permanent skill up</strong>
+                <div className="buff-grid">
+                  {buffPartyIds.flatMap((actorId) =>
+                    BUFF_TYPES.map((buff) => (
+                      <button
+                        type="button"
+                        key={`${actorId}-${buff.type}`}
+                        onClick={() => chooseCharacterBuff(actorId, buff.type)}
+                      >
+                        <span>{PARTY_LABELS[actorId]}</span>
+                        <b>{buff.label}</b>
+                        <small>{buff.detail}</small>
+                      </button>
+                    )),
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         <aside className="music-player" aria-label="Music player">
           <audio
@@ -3193,26 +3215,6 @@ function App() {
               </span>
             )}
           </div>
-          {pendingBuffChoice && (
-            <div className="buff-picker" aria-label="Permanent chest buff">
-              <strong>Chest {pendingBuffChoice.chestNumber}: choose a permanent buff</strong>
-              <div className="buff-grid">
-                {buffPartyIds.flatMap((actorId) =>
-                  BUFF_TYPES.map((buff) => (
-                    <button
-                      type="button"
-                      key={`${actorId}-${buff.type}`}
-                      onClick={() => chooseCharacterBuff(actorId, buff.type)}
-                    >
-                      <span>{PARTY_LABELS[actorId]}</span>
-                      <b>{buff.label}</b>
-                      <small>{buff.detail}</small>
-                    </button>
-                  )),
-                )}
-              </div>
-            </div>
-          )}
           <div className="player-buttons">
             <button type="button" onClick={playPauseMusic}>
               {isPlaying ? 'Pause' : 'Play'}

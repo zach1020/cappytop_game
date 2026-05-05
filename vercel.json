@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/cheats",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cheats/",
+      "destination": "/index.html"
+    }
+  ]
+}

@@ -38,3 +38,4 @@ TODO:
 - Moved the chest skill-up chooser into a fixed, high-z-index modal centered over the game so it appears above the canvas instead of inside the lower music panel.
 - Moved `Gold Rain Unlocks.wav` into `public/` and added it as a campaign-clear music-player unlock, independent of the green dragon/all-chests reward.
 - Added an unlinked `/cheats` route for session testing: stage selection, chest count, green dragon toggle, campaign song toggle, and per-character range/damage/defense buff controls.
+- Added `vercel.json` rewrites for `/cheats` and `/cheats/` so deployed Vercel builds serve the Vite app shell for the private route instead of returning 404.

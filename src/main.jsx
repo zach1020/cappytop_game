@@ -46,24 +46,50 @@ const DRAGON_MOVE_SPEED = 3.4;
 const TERRAIN_ANIMATION_SPEED = 0.5;
 const HERO_MOVE_RANGE = 5;
 const WIZARD_MOVE_RANGE = 5;
-const ARCHER_MOVE_RANGE = 5;
+const ARCHER_MOVE_RANGE = 7;
 const DRAGON_MOVE_RANGE = 5;
 const HERO_ATTACK_RANGE = 2;
-const WIZARD_ATTACK_RANGE = 5;
+const WIZARD_ATTACK_RANGE = 7;
 const ARCHER_ATTACK_RANGE = 5;
 const DRAGON_ATTACK_RANGE = 5;
+const DRAGON_PHYSICAL_ATTACK_RANGE = 2;
 const CHEST_OPEN_RANGE = 2;
 const HERO_ATTACK_DAMAGE = 5;
 const WIZARD_ATTACK_DAMAGE = 4;
 const ARCHER_ATTACK_DAMAGE = 4;
 const DRAGON_ATTACK_DAMAGE = 3;
+const DRAGON_PHYSICAL_DAMAGE_BONUS = 1;
+const HERO_DEFENSE_BONUS = 0.5;
+const GREEN_DRAGON_MAX_HP = 36;
+const GREEN_DRAGON_MOVE_RANGE = 14;
+const GREEN_DRAGON_RANGED_ATTACK_RANGE = 6;
+const GREEN_DRAGON_PHYSICAL_ATTACK_RANGE = 2;
+const GREEN_DRAGON_RANGED_DAMAGE = 7;
+const GREEN_DRAGON_PHYSICAL_DAMAGE = 9;
+const GREEN_DRAGON_DEFENSE_BONUS = 2.5;
 const CHEST_ATTACK_BONUS = 0.5;
 const CHEST_DEFENSE_BONUS = 0.25;
+const CHEST_CHARACTER_DAMAGE_BONUS = 1;
+const CHEST_CHARACTER_DEFENSE_BONUS = 0.5;
+const CHEST_CHARACTER_RANGE_BONUS = 1;
 const MAX_CHEST_ATTACK_BONUS = 4;
 const MAX_CHEST_DEFENSE_BONUS = 3;
 const MIN_MANUAL_ZOOM = 0.6;
 const MAX_MANUAL_ZOOM = 1.75;
 const EDGE_FOG_MIN_SCALE = 1.08;
+
+const PARTY_IDS = ['hero', 'wizard', 'archer', 'greenDragon'];
+const PARTY_LABELS = {
+  hero: 'Hero',
+  wizard: 'Wizard',
+  archer: 'Archer',
+  greenDragon: 'Green Dragon',
+};
+const BUFF_TYPES = [
+  { type: 'range', label: 'Range', detail: `ATK range +${CHEST_CHARACTER_RANGE_BONUS}` },
+  { type: 'damage', label: 'Damage', detail: `DMG +${CHEST_CHARACTER_DAMAGE_BONUS}` },
+  { type: 'defense', label: 'Defense', detail: `DEF +${formatStat(CHEST_CHARACTER_DEFENSE_BONUS)}` },
+];
 
 const INITIAL_HERO_CELL = { col: 5, row: 9 };
 const INITIAL_WIZARD_CELL = { col: 4, row: 10 };
@@ -75,6 +101,7 @@ const TRACKS = [
   { title: 'Glitch Anthem', file: 'Glitch Anthem.wav' },
   { title: 'Glitch Orchard', file: 'Glitch Orchard.wav' },
   { title: 'Soldered Stardust', file: 'Soldered Stardust.wav' },
+  { title: 'The Green Dragon of Yore', file: 'The Green Dragon of Yore.wav', requiresGreenDragon: true },
 ];
 
 const TERRAIN_MAP = [
@@ -122,8 +149,8 @@ const STAGES = [
       '...~~~......~~~....',
       '..........~~~~.....',
       '..........~~~~.....',
-      '.....~~~...........',
       '.....~~~.....~~~...',
+      '.....~~~...........',
       '............~~~....',
       '...~~~~............',
       '...~~~~............',
@@ -291,6 +318,19 @@ function isWaterCell(cell, terrainMap = TERRAIN_MAP) {
   return terrainMap[cell.row]?.[cell.col] === '~';
 }
 
+function terrainWithGrassAt(terrainMap, cell) {
+  if (!terrainMap[cell.row] || terrainMap[cell.row][cell.col] !== '~') {
+    return terrainMap;
+  }
+
+  return terrainMap.map((row, rowIndex) => {
+    if (rowIndex !== cell.row) {
+      return row;
+    }
+    return `${row.slice(0, cell.col)}.${row.slice(cell.col + 1)}`;
+  });
+}
+
 function gridDistance(a, b) {
   return Math.max(Math.abs(a.col - b.col), Math.abs(a.row - b.row));
 }
@@ -418,6 +458,43 @@ function findReachableCells(from, maxSteps, blockedKeys = new Set(), terrainMap 
   return reachable;
 }
 
+function findNearestOpenCell(from, blockedKeys = new Set(), terrainMap = TERRAIN_MAP) {
+  if (!isBlockedCell(from, blockedKeys, terrainMap)) {
+    return from;
+  }
+
+  const queue = [from];
+  const visited = new Set([cellKey(from)]);
+  const directions = [
+    { col: 1, row: 0 },
+    { col: -1, row: 0 },
+    { col: 0, row: 1 },
+    { col: 0, row: -1 },
+    { col: 1, row: 1 },
+    { col: -1, row: 1 },
+    { col: 1, row: -1 },
+    { col: -1, row: -1 },
+  ];
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    for (const direction of directions) {
+      const next = { col: current.col + direction.col, row: current.row + direction.row };
+      const nextKey = cellKey(next);
+      if (!isCellInBounds(next) || visited.has(nextKey)) {
+        continue;
+      }
+      if (!isBlockedCell(next, blockedKeys, terrainMap)) {
+        return next;
+      }
+      visited.add(nextKey);
+      queue.push(next);
+    }
+  }
+
+  return from;
+}
+
 function roundStat(value) {
   return Math.round(value * 10) / 10;
 }
@@ -426,12 +503,42 @@ function formatStat(value) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
-function createSessionPower(chestsOpened = 0) {
+function createCharacterBuffs(source = {}) {
+  return PARTY_IDS.reduce((buffs, actorId) => {
+    const existing = source[actorId] || {};
+    buffs[actorId] = {
+      range: existing.range || 0,
+      damage: existing.damage || 0,
+      defense: existing.defense || 0,
+    };
+    return buffs;
+  }, {});
+}
+
+function createSessionPower(chestsOpened = 0, characterBuffs = createCharacterBuffs()) {
   return {
     chestsOpened,
     attackBonus: roundStat(Math.min(chestsOpened * CHEST_ATTACK_BONUS, MAX_CHEST_ATTACK_BONUS)),
     defenseBonus: roundStat(Math.min(chestsOpened * CHEST_DEFENSE_BONUS, MAX_CHEST_DEFENSE_BONUS)),
+    characterBuffs: createCharacterBuffs(characterBuffs),
   };
+}
+
+function applyCharacterBuff(sessionPower, actorId, buffType) {
+  const nextBuffs = createCharacterBuffs(sessionPower.characterBuffs);
+  if (!nextBuffs[actorId] || !['range', 'damage', 'defense'].includes(buffType)) {
+    return sessionPower;
+  }
+
+  if (buffType === 'defense') {
+    nextBuffs[actorId].defense = roundStat(nextBuffs[actorId].defense + CHEST_CHARACTER_DEFENSE_BONUS);
+  } else if (buffType === 'damage') {
+    nextBuffs[actorId].damage += CHEST_CHARACTER_DAMAGE_BONUS;
+  } else {
+    nextBuffs[actorId].range += CHEST_CHARACTER_RANGE_BONUS;
+  }
+
+  return createSessionPower(sessionPower.chestsOpened, nextBuffs);
 }
 
 function App() {
@@ -447,8 +554,12 @@ function App() {
   const [sfxMuted, setSfxMuted] = useState(false);
   const [restartNonce, setRestartNonce] = useState(0);
   const [stageIndex, setStageIndex] = useState(0);
+  const [playthrough, setPlaythrough] = useState(1);
+  const [greenDragonUnlocked, setGreenDragonUnlocked] = useState(false);
+  const [bonusSongNotice, setBonusSongNotice] = useState(null);
   const [battleOutcome, setBattleOutcome] = useState(null);
   const [sessionPower, setSessionPower] = useState(() => createSessionPower());
+  const [pendingBuffChoice, setPendingBuffChoice] = useState(null);
   const [campaignStats, setCampaignStats] = useState({
     stagesCleared: 0,
     chestsOpened: 0,
@@ -594,7 +705,7 @@ function App() {
 
   function skipTrack() {
     ensureSfx();
-    setCurrentTrack((track) => (track + 1) % TRACKS.length);
+    setCurrentTrack((track) => (track + 1) % availableTracks.length);
     setIsPlaying(true);
   }
 
@@ -603,7 +714,7 @@ function App() {
   }
 
   function onTrackEnded() {
-    setCurrentTrack((track) => (track + 1) % TRACKS.length);
+    setCurrentTrack((track) => (track + 1) % availableTracks.length);
     setIsPlaying(true);
   }
 
@@ -615,6 +726,7 @@ function App() {
   function restartGame() {
     ensureSfx();
     setBattleOutcome(null);
+    setPendingBuffChoice(null);
     setStageIndex(0);
     setCampaignStats({
       stagesCleared: 0,
@@ -630,18 +742,60 @@ function App() {
   function repeatStage() {
     ensureSfx();
     setBattleOutcome(null);
+    setPendingBuffChoice(null);
     setRestartNonce((nonce) => nonce + 1);
   }
 
   function nextStage() {
     ensureSfx();
     setBattleOutcome(null);
+    setPendingBuffChoice(null);
     setStageIndex((index) => Math.min(index + 1, STAGES.length - 1));
     setRestartNonce((nonce) => nonce + 1);
   }
 
-  const track = TRACKS[currentTrack];
+  function startSecondPlaythrough() {
+    ensureSfx();
+    setGreenDragonUnlocked(true);
+    setBonusSongNotice('The Green Dragon of Yore is now playable in the song player.');
+    setCurrentTrack(TRACKS.length - 1);
+    setIsPlaying(true);
+    setPlaythrough(2);
+    setBattleOutcome(null);
+    setPendingBuffChoice(null);
+    setStageIndex(0);
+    setCampaignStats({
+      stagesCleared: 0,
+      chestsOpened: 0,
+      dragonsDefeated: 0,
+      turns: 0,
+      damageDealt: 0,
+      damageTaken: 0,
+    });
+    setRestartNonce((nonce) => nonce + 1);
+  }
+
+  function chooseCharacterBuff(actorId, buffType) {
+    ensureSfx();
+    const nextSessionPower = applyCharacterBuff(sessionPowerRef.current, actorId, buffType);
+    sessionPowerRef.current = nextSessionPower;
+    if (gameRef.current) {
+      gameRef.current.sessionPower = nextSessionPower;
+      gameRef.current.lastAction = `${PARTY_LABELS[actorId]} gains ${buffType}`;
+      gameRef.current.pendingRewardResolved = true;
+      gameRef.current.pendingBuffChoice = null;
+    }
+    setSessionPower(nextSessionPower);
+    setPendingBuffChoice(null);
+    window.resolve_chest_reward?.();
+  }
+
+  const availableTracks = greenDragonUnlocked ? TRACKS : TRACKS.filter((trackItem) => !trackItem.requiresGreenDragon);
+  const safeTrackIndex = Math.min(currentTrack, availableTracks.length - 1);
+  const track = availableTracks[safeTrackIndex];
   const stage = STAGES[stageIndex];
+  const allChestsOpened = campaignStats.chestsOpened >= STAGES.length;
+  const buffPartyIds = PARTY_IDS.filter((actorId) => actorId !== 'greenDragon' || greenDragonUnlocked);
 
   useEffect(() => {
     setBattleOutcome(null);
@@ -656,7 +810,8 @@ function App() {
     const fireballImage = loadImage('/fireball.png');
     const archerImage = loadImage('/archer.png');
     const chestImage = loadImage('/chest.png');
-    const boardTiles = createBoardTiles(stage.terrain);
+    const stageTerrain = terrainWithGrassAt(stage.terrain, stage.chest);
+    const boardTiles = createBoardTiles(stageTerrain);
     const createDragon = (dragon) => ({
       id: dragon.id,
       label: dragon.label,
@@ -673,11 +828,26 @@ function App() {
       path: [],
       moving: false,
     });
+    const hasGreenDragon = greenDragonUnlocked && playthrough >= 2;
+    const greenDragonBlocked = new Set([
+      cellKey(stage.heroes.hero),
+      cellKey(stage.heroes.wizard),
+      cellKey(stage.heroes.archer),
+      cellKey(stage.chest),
+      ...stage.dragons.map((dragon) => cellKey({ col: dragon.col, row: dragon.row })),
+    ]);
+    const greenDragonStart = findNearestOpenCell(
+      { col: stage.heroes.hero.col + 1, row: stage.heroes.hero.row + 1 },
+      greenDragonBlocked,
+      stageTerrain,
+    );
 
     const state = {
       stageIndex,
       stageName: stage.name,
-      terrainMap: stage.terrain,
+      playthrough,
+      greenDragonUnlocked: hasGreenDragon,
+      terrainMap: stageTerrain,
       canvasWidth: 960,
       canvasHeight: 960,
       boardPixels: 844,
@@ -697,6 +867,8 @@ function App() {
       arrows: [],
       particles: [],
       screenBlurb: null,
+      pendingRewardResolved: false,
+      pendingBuffChoice: null,
       stageStats: {
         chestsOpened: 0,
         dragonsDefeated: 0,
@@ -708,8 +880,8 @@ function App() {
       pendingDragonIds: [],
       activeDragonId: null,
       selectedActor: 'hero',
-      acted: { hero: false, wizard: false, archer: false },
-      aggro: { hero: 0, wizard: 0, archer: 0 },
+      acted: { hero: false, wizard: false, archer: false, greenDragon: !hasGreenDragon },
+      aggro: { hero: 0, wizard: 0, archer: 0, greenDragon: 0 },
       activePathHighlight: null,
       camera: {
         x: 480,
@@ -752,6 +924,19 @@ function App() {
         y: stage.heroes.archer.row,
         hp: 20,
         maxHp: 20,
+        target: null,
+        path: [],
+        moving: false,
+      },
+      greenDragon: {
+        id: 'greenDragon',
+        label: 'Green Dragon',
+        col: greenDragonStart.col,
+        row: greenDragonStart.row,
+        x: greenDragonStart.col,
+        y: greenDragonStart.row,
+        hp: hasGreenDragon ? GREEN_DRAGON_MAX_HP : 0,
+        maxHp: GREEN_DRAGON_MAX_HP,
         target: null,
         path: [],
         moving: false,
@@ -820,7 +1005,7 @@ function App() {
     }
 
     function partyActors() {
-      return [state.hero, state.wizard, state.archer];
+      return [state.hero, state.wizard, state.archer, state.greenDragon].filter((actor) => actor.maxHp > 0);
     }
 
     function livingParty() {
@@ -828,9 +1013,7 @@ function App() {
     }
 
     function actorLabel(id) {
-      if (id === 'hero') return 'Hero';
-      if (id === 'wizard') return 'Wizard';
-      if (id === 'archer') return 'Archer';
+      if (PARTY_LABELS[id]) return PARTY_LABELS[id];
       if (id?.startsWith('dragon')) return actorById(id)?.label || 'Dragon';
       return 'Character';
     }
@@ -839,6 +1022,7 @@ function App() {
       if (id === 'hero') return state.hero;
       if (id === 'wizard') return state.wizard;
       if (id === 'archer') return state.archer;
+      if (id === 'greenDragon') return state.greenDragon;
       if (id === 'dragon') return activeDragon();
       if (id?.startsWith('dragon')) return state.dragons.find((dragon) => dragon.id === id) || null;
       return null;
@@ -848,30 +1032,46 @@ function App() {
       return Boolean(actor?.id?.startsWith('dragon'));
     }
 
+    function characterBuff(actorId, buffType) {
+      return state.sessionPower.characterBuffs?.[actorId]?.[buffType] || 0;
+    }
+
     function moveRangeFor(actor) {
+      if (actor.id === 'greenDragon') return GREEN_DRAGON_MOVE_RANGE;
       if (actor.id === 'wizard') return WIZARD_MOVE_RANGE;
       if (actor.id === 'archer') return ARCHER_MOVE_RANGE;
       return HERO_MOVE_RANGE;
     }
 
     function attackRangeFor(actor) {
-      if (actor.id === 'wizard') return WIZARD_ATTACK_RANGE;
-      if (actor.id === 'archer') return ARCHER_ATTACK_RANGE;
-      return HERO_ATTACK_RANGE;
+      if (actor.id === 'greenDragon') return GREEN_DRAGON_RANGED_ATTACK_RANGE + characterBuff(actor.id, 'range');
+      if (actor.id === 'wizard') return WIZARD_ATTACK_RANGE + characterBuff(actor.id, 'range');
+      if (actor.id === 'archer') return ARCHER_ATTACK_RANGE + characterBuff(actor.id, 'range');
+      return HERO_ATTACK_RANGE + characterBuff(actor.id, 'range');
     }
 
     function baseAttackDamageFor(actorId) {
+      if (actorId === 'greenDragon') return GREEN_DRAGON_RANGED_DAMAGE;
       if (actorId === 'wizard') return WIZARD_ATTACK_DAMAGE;
       if (actorId === 'archer') return ARCHER_ATTACK_DAMAGE;
       return HERO_ATTACK_DAMAGE;
     }
 
     function attackDamageFor(actorId) {
-      return roundStat(baseAttackDamageFor(actorId) + state.sessionPower.attackBonus);
+      return roundStat(baseAttackDamageFor(actorId) + state.sessionPower.attackBonus + characterBuff(actorId, 'damage'));
     }
 
-    function incomingDamageAfterDefense(damage) {
-      return roundStat(Math.max(1, damage - state.sessionPower.defenseBonus));
+    function greenDragonPhysicalDamage() {
+      return roundStat(GREEN_DRAGON_PHYSICAL_DAMAGE + state.sessionPower.attackBonus + characterBuff('greenDragon', 'damage'));
+    }
+
+    function defenseBonusFor(actorId) {
+      const base = actorId === 'hero' ? HERO_DEFENSE_BONUS : actorId === 'greenDragon' ? GREEN_DRAGON_DEFENSE_BONUS : 0;
+      return roundStat(base + characterBuff(actorId, 'defense'));
+    }
+
+    function incomingDamageAfterDefense(damage, targetId) {
+      return roundStat(Math.max(1, damage - state.sessionPower.defenseBonus - defenseBonusFor(targetId)));
     }
 
     function selectedActor() {
@@ -990,9 +1190,23 @@ function App() {
         return;
       }
       state.phase = 'defeat';
-      state.lastAction = 'Game over';
-      setScreenBlurb('GAME OVER !!!', 4.5, true);
+      state.lastAction = 'Game over: returning to Stage 1';
+      setScreenBlurb('GAME OVER - BACK TO STAGE 1', 2.2, true);
       setBattleOutcome('defeat');
+      window.setTimeout(() => {
+        setBattleOutcome(null);
+        setPendingBuffChoice(null);
+        setStageIndex(0);
+        setCampaignStats({
+          stagesCleared: 0,
+          chestsOpened: 0,
+          dragonsDefeated: 0,
+          turns: 0,
+          damageDealt: 0,
+          damageTaken: 0,
+        });
+        setRestartNonce((nonce) => nonce + 1);
+      }, 2200);
     }
 
     function resize() {
@@ -1040,7 +1254,7 @@ function App() {
 
     function updateCameraTarget() {
       const points = [];
-      for (const actor of [state.hero, state.wizard, state.archer, ...state.dragons]) {
+      for (const actor of [...partyActors(), ...state.dragons]) {
         if (actor.hp > 0) {
           points.push(boardToWorld(actorScreenCell(actor)));
         }
@@ -1105,6 +1319,13 @@ function App() {
     }
 
     window.end_player_turn = endPlayerTurn;
+    window.resolve_chest_reward = () => {
+      if (state.phase !== 'chest_reward') {
+        return;
+      }
+      finishPlayerActorAction(state.chest.opener);
+      render();
+    };
 
     function beginDragonTurn() {
       if (state.phase === 'victory' || state.phase === 'defeat') {
@@ -1128,6 +1349,7 @@ function App() {
         hero: state.hero.hp <= 0,
         wizard: state.wizard.hp <= 0,
         archer: state.archer.hp <= 0,
+        greenDragon: state.greenDragon.hp <= 0,
       };
       state.selectedActor = livingParty()[0]?.id || 'hero';
       state.activePathHighlight = null;
@@ -1197,6 +1419,27 @@ function App() {
       state.blockedClickCell = null;
     }
 
+    function startGreenDragonAttack(targetEnemy) {
+      const distance = gridDistance(actorCell(state.greenDragon), dragonCell(targetEnemy));
+      const isPhysical = distance <= GREEN_DRAGON_PHYSICAL_ATTACK_RANGE;
+      if (isPhysical) {
+        playMeleeSfx();
+      }
+      state.phase = 'green_dragon_attacking';
+      state.activeAttack = {
+        actor: 'greenDragon',
+        target: targetEnemy.id,
+        kind: isPhysical ? 'physical' : 'fireball',
+        elapsed: 0,
+        duration: DRAGON_ATTACK_FRAMES / DRAGON_ATTACK_FPS,
+        damage: isPhysical ? greenDragonPhysicalDamage() : attackDamageFor('greenDragon'),
+        applied: false,
+      };
+      state.lastAction = isPhysical ? 'Green Dragon mauls' : 'Green Dragon breathes';
+      state.lastClickCell = dragonCell(targetEnemy);
+      state.blockedClickCell = null;
+    }
+
     function launchFireball(owner, targetId, damage) {
       const ownerActor = actorById(owner);
       const targetActor = actorById(targetId);
@@ -1240,19 +1483,25 @@ function App() {
       state.lastAction = 'Arrow flies';
     }
 
-    function startDragonAttack(dragon, targetId) {
+    function startDragonAttack(dragon, targetId, attackKind = 'fireball') {
+      const isPhysical = attackKind === 'physical';
+      const baseDamage = dragon.damage + (isPhysical ? DRAGON_PHYSICAL_DAMAGE_BONUS : 0);
+      if (isPhysical) {
+        playMeleeSfx();
+      }
       state.phase = 'dragon_attacking';
       state.activeDragonId = dragon.id;
       state.activeAttack = {
         actor: dragon.id,
         target: targetId,
+        kind: attackKind,
         elapsed: 0,
         duration: DRAGON_ATTACK_FRAMES / DRAGON_ATTACK_FPS,
-        damage: incomingDamageAfterDefense(dragon.damage),
-        baseDamage: dragon.damage,
+        damage: incomingDamageAfterDefense(baseDamage, targetId),
+        baseDamage,
         applied: false,
       };
-      state.lastAction = `${actorLabel(dragon.id)} attacks`;
+      state.lastAction = isPhysical ? `${actorLabel(dragon.id)} claws` : `${actorLabel(dragon.id)} casts fireball`;
     }
 
     function damageActor(target, damage) {
@@ -1349,10 +1598,8 @@ function App() {
         return;
       }
 
-      if (actor === 'hero') {
-        finishPlayerActorAction('hero');
-      } else if (actor === 'archer') {
-        finishPlayerActorAction('archer');
+      if (PARTY_LABELS[actor]) {
+        finishPlayerActorAction(actor);
       } else if (actor?.startsWith('dragon')) {
         finishDragonAction();
       }
@@ -1420,7 +1667,7 @@ function App() {
       }
 
       const occupant = actorAtCell(cell);
-      if (occupant?.id === 'hero' || occupant?.id === 'wizard' || occupant?.id === 'archer') {
+      if (PARTY_LABELS[occupant?.id]) {
         state.selectedActor = occupant.id;
         state.lastAction = `${actorLabel(occupant.id)} selected`;
         render();
@@ -1439,7 +1686,9 @@ function App() {
           setBlockedClick(cell, 'Attack out of range');
           return;
         }
-        if (actor.id === 'wizard') {
+        if (actor.id === 'greenDragon') {
+          startGreenDragonAttack(occupant);
+        } else if (actor.id === 'wizard') {
           startWizardAttack(occupant);
         } else if (actor.id === 'archer') {
           startArcherAttack(occupant);
@@ -1465,14 +1714,16 @@ function App() {
         state.chest.bonusRound = state.round;
         state.chest.opener = actor.id;
         state.stageStats.chestsOpened = 1;
-        const nextSessionPower = createSessionPower(state.sessionPower.chestsOpened + 1);
+        const nextSessionPower = createSessionPower(state.sessionPower.chestsOpened + 1, state.sessionPower.characterBuffs);
         state.sessionPower = nextSessionPower;
         sessionPowerRef.current = nextSessionPower;
         setSessionPower(nextSessionPower);
+        state.pendingBuffChoice = { chestNumber: nextSessionPower.chestsOpened, opener: actor.id };
+        setPendingBuffChoice(state.pendingBuffChoice);
         setScreenBlurb('CHEST POWER!', 1.35);
         state.lastClickCell = chestCell();
         state.blockedClickCell = null;
-        state.lastAction = `${actorLabel(actor.id)} opens chest: ATK +${formatStat(nextSessionPower.attackBonus)} DEF +${formatStat(nextSessionPower.defenseBonus)}`;
+        state.lastAction = `${actorLabel(actor.id)} opens chest: choose a permanent buff`;
         return;
       }
 
@@ -1566,8 +1817,13 @@ function App() {
         return;
       }
 
+      if (target.distance <= DRAGON_PHYSICAL_ATTACK_RANGE) {
+        startDragonAttack(dragon, target.actor.id, 'physical');
+        return;
+      }
+
       if (target.distance <= dragon.attackRange) {
-        startDragonAttack(dragon, target.actor.id);
+        startDragonAttack(dragon, target.actor.id, 'fireball');
         return;
       }
 
@@ -1781,11 +2037,36 @@ function App() {
         }
       } else if (state.phase === 'dragon_attacking') {
         state.activeAttack.elapsed += dt;
-        if (state.activeAttack.elapsed >= state.activeAttack.duration) {
+        if (state.activeAttack.kind === 'physical') {
+          if (state.activeAttack.elapsed >= state.activeAttack.duration * 0.55) {
+            applyAttackDamage();
+          }
+          if (state.activeAttack.elapsed >= state.activeAttack.duration) {
+            if (!state.activeAttack.applied) {
+              applyAttackDamage();
+            }
+            finishAttack();
+          }
+        } else if (state.activeAttack.elapsed >= state.activeAttack.duration) {
           const targetId = state.activeAttack.target;
           const dragon = actorById(state.activeAttack.actor);
           if (!dragon) return;
           launchFireball(dragon.id, targetId, state.activeAttack.damage);
+        }
+      } else if (state.phase === 'green_dragon_attacking') {
+        state.activeAttack.elapsed += dt;
+        if (state.activeAttack.kind === 'physical') {
+          if (state.activeAttack.elapsed >= state.activeAttack.duration * 0.55) {
+            applyAttackDamage();
+          }
+          if (state.activeAttack.elapsed >= state.activeAttack.duration) {
+            if (!state.activeAttack.applied) {
+              applyAttackDamage();
+            }
+            finishAttack();
+          }
+        } else if (state.activeAttack.elapsed >= state.activeAttack.duration) {
+          launchFireball('greenDragon', state.activeAttack.target, state.activeAttack.damage);
         }
       } else if (state.phase === 'wizard_casting') {
         state.activeAttack.elapsed += dt;
@@ -1816,6 +2097,11 @@ function App() {
         if (finished) {
           finishPlayerActorAction('archer');
         }
+      } else if (state.phase === 'greenDragon_moving') {
+        const finished = updateMover(state.greenDragon, dt, DRAGON_MOVE_SPEED);
+        if (finished) {
+          finishPlayerActorAction('greenDragon');
+        }
       } else if (state.phase === 'dragon_turn') {
         state.aiDelay -= dt;
         if (state.aiDelay <= 0) {
@@ -1832,7 +2118,12 @@ function App() {
         state.chest.elapsed += dt;
         if (state.chest.elapsed >= CHEST_FRAMES / CHEST_FPS) {
           state.chest.opening = false;
-          finishPlayerActorAction(state.chest.opener);
+          if (state.pendingRewardResolved) {
+            finishPlayerActorAction(state.chest.opener);
+          } else {
+            state.phase = 'chest_reward';
+            state.lastAction = 'Choose a permanent chest buff';
+          }
         }
       }
 
@@ -1844,6 +2135,9 @@ function App() {
       }
       if (state.archer.hp <= 0) {
         state.acted.archer = true;
+      }
+      if (state.greenDragon.hp <= 0) {
+        state.acted.greenDragon = true;
       }
     }
 
@@ -1955,7 +2249,7 @@ function App() {
     }
 
     function drawAttackRadius(actor) {
-      if (!actor || actor.hp <= 0 || state.acted[actor.id] || (actor.id !== 'wizard' && actor.id !== 'archer')) {
+      if (!actor || actor.hp <= 0 || state.acted[actor.id] || !PARTY_LABELS[actor.id]) {
         return;
       }
 
@@ -2157,7 +2451,7 @@ function App() {
       });
     }
 
-    function drawDragon(dragon) {
+    function drawDragon(dragon, green = false) {
       if (dragon.hp <= 0) {
         return;
       }
@@ -2174,6 +2468,9 @@ function App() {
       const sourceY = Math.floor(attackFrame / DRAGON_ATTACK_COLUMNS) * DRAGON_FRAME_SIZE;
 
       withLowHealthFlash(dragon, () => {
+        if (green && !isLowHealth(dragon)) {
+          ctx.filter = 'sepia(1) saturate(2.7) hue-rotate(58deg) brightness(1.04)';
+        }
         ctx.shadowColor = 'rgba(0, 0, 0, 0.46)';
         ctx.shadowBlur = 12;
         ctx.shadowOffsetY = 9;
@@ -2491,17 +2788,19 @@ function App() {
               ? 'Wizard Attack'
               : state.phase === 'archer_attacking' || state.phase === 'arrow_flying'
                 ? 'Archer Attack'
-              : state.phase === 'dragon_attacking'
-                ? 'Dragon Attack'
-                : state.phase === 'dragon_turn' || state.phase === 'dragon_moving'
-                  ? 'Dragon Turn'
-                  : state.phase === 'chest_opening'
-                    ? 'Bonus Chest'
-                  : state.phase === 'victory'
-                    ? 'Victory'
-                    : state.phase === 'defeat'
-                      ? 'Defeat'
-                      : 'Moving';
+                : state.phase === 'green_dragon_attacking'
+                  ? 'Green Dragon Attack'
+                  : state.phase === 'dragon_attacking'
+                    ? 'Dragon Attack'
+                    : state.phase === 'dragon_turn' || state.phase === 'dragon_moving'
+                      ? 'Dragon Turn'
+                      : state.phase === 'chest_opening' || state.phase === 'chest_reward'
+                        ? 'Bonus Chest'
+                        : state.phase === 'victory'
+                          ? 'Victory'
+                          : state.phase === 'defeat'
+                            ? 'Defeat'
+                            : 'Moving';
       const selected = actorLabel(state.selectedActor);
 
       ctx.save();
@@ -2586,11 +2885,12 @@ function App() {
 
       drawChest();
 
-      const actors = [state.hero, state.wizard, state.archer, ...state.dragons].sort((a, b) => a.y - b.y);
+      const actors = [...partyActors(), ...state.dragons].sort((a, b) => a.y - b.y);
       for (const actor of actors) {
         if (actor.id === 'hero') drawHero();
         if (actor.id === 'wizard') drawWizard();
         if (actor.id === 'archer') drawArcher();
+        if (actor.id === 'greenDragon') drawDragon(actor, true);
         if (isEnemy(actor)) drawDragon(actor);
       }
       drawFireballs();
@@ -2622,7 +2922,7 @@ function App() {
       return JSON.stringify({
         coordinate_system: '19x19 board, origin at top-left, col increases right, row increases down',
         board: { columns: BOARD_SIZE, rows: BOARD_SIZE },
-        stage: { number: state.stageIndex + 1, name: state.stageName, total: STAGES.length },
+        stage: { number: state.stageIndex + 1, name: state.stageName, total: STAGES.length, playthrough: state.playthrough },
         phase: state.phase,
         battle_outcome: state.phase === 'victory' ? 'victory' : state.phase === 'defeat' ? 'defeat' : null,
         round: state.round,
@@ -2638,6 +2938,17 @@ function App() {
           wizard_attack_range: WIZARD_ATTACK_RANGE,
           archer_attack_range: ARCHER_ATTACK_RANGE,
           dragon_attack_range: DRAGON_ATTACK_RANGE,
+          dragon_fireball_range: DRAGON_ATTACK_RANGE,
+          dragon_physical_attack_range: DRAGON_PHYSICAL_ATTACK_RANGE,
+          dragon_physical_damage_bonus: DRAGON_PHYSICAL_DAMAGE_BONUS,
+          hero_defense_bonus: HERO_DEFENSE_BONUS,
+          green_dragon_unlocked: state.greenDragonUnlocked,
+          green_dragon_move_range: GREEN_DRAGON_MOVE_RANGE,
+          green_dragon_ranged_attack_range: GREEN_DRAGON_RANGED_ATTACK_RANGE,
+          green_dragon_physical_attack_range: GREEN_DRAGON_PHYSICAL_ATTACK_RANGE,
+          green_dragon_ranged_damage: GREEN_DRAGON_RANGED_DAMAGE,
+          green_dragon_physical_damage: GREEN_DRAGON_PHYSICAL_DAMAGE,
+          green_dragon_defense_bonus: GREEN_DRAGON_DEFENSE_BONUS,
           chest_open_range: CHEST_OPEN_RANGE,
           chest_attack_bonus_per_open: CHEST_ATTACK_BONUS,
           chest_defense_bonus_per_open: CHEST_DEFENSE_BONUS,
@@ -2647,6 +2958,12 @@ function App() {
           sfx_muted: sfxMutedRef.current,
         },
         session_power: state.sessionPower,
+        pending_buff_choice: state.pendingBuffChoice,
+        music: {
+          current_track: track.title,
+          available_tracks: availableTracks.map((trackItem) => trackItem.title),
+          bonus_song_notice: bonusSongNotice,
+        },
         camera: {
           auto_zoom_scale: Number(state.camera.scale.toFixed(2)),
           manual_zoom: Number(state.camera.manualZoom.toFixed(2)),
@@ -2672,6 +2989,10 @@ function App() {
           hp: state.hero.hp,
           max_hp: state.hero.maxHp,
           attack_damage: attackDamageFor('hero'),
+          attack_range: attackRangeFor(state.hero),
+          move_range: moveRangeFor(state.hero),
+          defense_bonus: defenseBonusFor('hero'),
+          total_defense_bonus: roundStat(state.sessionPower.defenseBonus + defenseBonusFor('hero')),
           moving: state.hero.moving,
           queued_steps: state.hero.path.length,
         },
@@ -2683,6 +3004,10 @@ function App() {
           hp: state.wizard.hp,
           max_hp: state.wizard.maxHp,
           attack_damage: attackDamageFor('wizard'),
+          attack_range: attackRangeFor(state.wizard),
+          move_range: moveRangeFor(state.wizard),
+          defense_bonus: defenseBonusFor('wizard'),
+          total_defense_bonus: roundStat(state.sessionPower.defenseBonus + defenseBonusFor('wizard')),
           moving: state.wizard.moving,
           queued_steps: state.wizard.path.length,
         },
@@ -2694,8 +3019,30 @@ function App() {
           hp: state.archer.hp,
           max_hp: state.archer.maxHp,
           attack_damage: attackDamageFor('archer'),
+          attack_range: attackRangeFor(state.archer),
+          move_range: moveRangeFor(state.archer),
+          defense_bonus: defenseBonusFor('archer'),
+          total_defense_bonus: roundStat(state.sessionPower.defenseBonus + defenseBonusFor('archer')),
           moving: state.archer.moving,
           queued_steps: state.archer.path.length,
+        },
+        green_dragon: {
+          unlocked: state.greenDragonUnlocked,
+          col: Number(state.greenDragon.x.toFixed(2)),
+          row: Number(state.greenDragon.y.toFixed(2)),
+          cell_col: state.greenDragon.col,
+          cell_row: state.greenDragon.row,
+          hp: state.greenDragon.hp,
+          max_hp: state.greenDragon.maxHp,
+          ranged_attack_damage: attackDamageFor('greenDragon'),
+          physical_attack_damage: greenDragonPhysicalDamage(),
+          attack_range: attackRangeFor(state.greenDragon),
+          physical_attack_range: GREEN_DRAGON_PHYSICAL_ATTACK_RANGE,
+          move_range: moveRangeFor(state.greenDragon),
+          defense_bonus: defenseBonusFor('greenDragon'),
+          total_defense_bonus: roundStat(state.sessionPower.defenseBonus + defenseBonusFor('greenDragon')),
+          moving: state.greenDragon.moving,
+          queued_steps: state.greenDragon.path.length,
         },
         dragons: state.dragons.map((dragon) => ({
           id: dragon.id,
@@ -2707,6 +3054,10 @@ function App() {
           hp: dragon.hp,
           max_hp: dragon.maxHp,
           damage: dragon.damage,
+          fireball_damage: incomingDamageAfterDefense(dragon.damage, state.selectedActor),
+          physical_damage: incomingDamageAfterDefense(dragon.damage + DRAGON_PHYSICAL_DAMAGE_BONUS, state.selectedActor),
+          base_fireball_damage: dragon.damage,
+          base_physical_damage: dragon.damage + DRAGON_PHYSICAL_DAMAGE_BONUS,
           moving: dragon.moving,
           queued_steps: dragon.path.length,
           blocks_party: true,
@@ -2788,6 +3139,7 @@ function App() {
       delete window.render_game_to_text;
       delete window.advanceTime;
       delete window.end_player_turn;
+      delete window.resolve_chest_reward;
     };
   }, [restartNonce]);
 
@@ -2810,6 +3162,12 @@ function App() {
               <strong>Next Level</strong>
             </button>
           )}
+          {battleOutcome === 'campaign' && allChestsOpened && (
+            <button type="button" className="next-stage-overlay" onClick={startSecondPlaythrough}>
+              <span>All chests claimed</span>
+              <strong>Second Run</strong>
+            </button>
+          )}
         </div>
         <aside className="music-player" aria-label="Music player">
           <audio
@@ -2820,11 +3178,14 @@ function App() {
           />
           <div className="player-screen">
             <span className="track-label">
-              Stage {stageIndex + 1}/{STAGES.length} · {stage.name} · Track {currentTrack + 1}/{TRACKS.length}
+              Run {playthrough} · Stage {stageIndex + 1}/{STAGES.length} · {stage.name} · Track {safeTrackIndex + 1}/{availableTracks.length}
             </span>
             <strong>{track.title}</strong>
+            {bonusSongNotice && (
+              <span className="song-unlock-label">{bonusSongNotice}</span>
+            )}
             <span className="power-label">
-              Chests {sessionPower.chestsOpened} · ATK +{formatStat(sessionPower.attackBonus)} · DEF +{formatStat(sessionPower.defenseBonus)}
+              Chests {sessionPower.chestsOpened} · Party ATK +{formatStat(sessionPower.attackBonus)} · DEF +{formatStat(sessionPower.defenseBonus)}
             </span>
             {battleOutcome && (
               <span className="outcome-label">
@@ -2832,6 +3193,26 @@ function App() {
               </span>
             )}
           </div>
+          {pendingBuffChoice && (
+            <div className="buff-picker" aria-label="Permanent chest buff">
+              <strong>Chest {pendingBuffChoice.chestNumber}: choose a permanent buff</strong>
+              <div className="buff-grid">
+                {buffPartyIds.flatMap((actorId) =>
+                  BUFF_TYPES.map((buff) => (
+                    <button
+                      type="button"
+                      key={`${actorId}-${buff.type}`}
+                      onClick={() => chooseCharacterBuff(actorId, buff.type)}
+                    >
+                      <span>{PARTY_LABELS[actorId]}</span>
+                      <b>{buff.label}</b>
+                      <small>{buff.detail}</small>
+                    </button>
+                  )),
+                )}
+              </div>
+            </div>
+          )}
           <div className="player-buttons">
             <button type="button" onClick={playPauseMusic}>
               {isPlaying ? 'Pause' : 'Play'}
@@ -2855,14 +3236,9 @@ function App() {
                 Repeat
               </button>
             )}
-            {battleOutcome === 'defeat' && (
-              <button type="button" onClick={repeatStage}>
-                Retry
-              </button>
-            )}
             {battleOutcome && (
               <button type="button" onClick={restartGame}>
-                Restart
+                {battleOutcome === 'defeat' ? 'Begin Again' : 'Restart'}
               </button>
             )}
           </div>

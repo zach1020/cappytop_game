@@ -199,6 +199,13 @@ canvas {
   text-transform: uppercase;
 }
 
+.song-unlock-label {
+  color: #8cff76;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
 .player-screen strong {
   font-size: 16px;
   line-height: 1.15;
@@ -230,6 +237,54 @@ canvas {
 .player-buttons button:disabled {
   cursor: not-allowed;
   opacity: 0.48;
+}
+
+.buff-picker {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: #0a120d;
+  border: 2px solid #ffd66b;
+  box-shadow: inset 0 0 0 2px rgba(255, 214, 107, 0.16);
+}
+
+.buff-picker > strong {
+  color: #fff0a7;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.buff-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.buff-grid button {
+  min-height: 58px;
+  display: grid;
+  gap: 2px;
+  align-content: center;
+  padding: 7px;
+  color: #0b120b;
+  background: #d9f09c;
+  border: 0;
+  box-shadow:
+    inset -3px -3px 0 #6d873f,
+    inset 3px 3px 0 #f7ffd0;
+  cursor: pointer;
+}
+
+.buff-grid button span,
+.buff-grid button small {
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.buff-grid button b {
+  font-size: 13px;
+  line-height: 1.05;
 }
 
 .volume-control {
@@ -294,6 +349,10 @@ canvas {
   .music-player {
     width: min(100%, 420px);
     grid-template-columns: 1fr;
+  }
+
+  .buff-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .reward-screen {

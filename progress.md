@@ -28,3 +28,10 @@ TODO:
 - Added `README.md` with project overview, local commands, structure, and Vercel asset troubleshooting notes.
 - Ran `npm run build`; production `dist/` now includes all PNG/WAV assets. Ran Vite preview plus web-game Playwright smoke check and visually inspected `output/web-game/shot-0.png`; the game board, terrain, party, dragon, and chest render correctly. Console check found no JS errors; one WAV request was aborted by the browser during idle load, which is harmless for the render fix.
 - Added session chest power: each opened chest grants a small capped ATK/DEF bonus to the three player characters. The bonus lives outside per-stage battle state, so it persists through game over and Retry/Restart within the same browser session.
+- Tuned party RPG roles: archer movement range is now 7, wizard attack range is now 7, and hero gets a small inherent +0.5 defense bonus on top of chest defense.
+- Split dragon offense into close physical attacks and longer fireballs. Dragons use physical attacks within 2 squares for +1 base damage over fireballs; fireballs still reach out to their stage attack range.
+- Added chest reward choices: each opened chest pauses for a permanent session buff assigned to a chosen party member, granting attack range, damage, or defense.
+- Defeat now forces the run back to Stage 1 automatically while preserving session power and permanent character buffs.
+- Added an optional second playthrough unlock: if the campaign is cleared after opening all stage chests, a green dragon joins the party with huge movement, strong defense, and ranged/physical attacks.
+- Chest terrain is normalized at board creation so every chest cell renders as grass, fixing chest-on-water placements.
+- Moved `The Green Dragon of Yore.wav` into `public/` and added it as a bonus music-player track that unlocks with the green dragon, with an in-player unlock notice.

@@ -24,3 +24,6 @@ TODO:
 - Play through later stages manually to tune exact dragon HP/damage and chest placements for difficulty feel.
 - Updated dragon ranged attack behavior to use the same tactical range as ranged player characters: wizard/archer range 5, dragons range 5 across every hard-coded stage. Dragons still move on their turn when targets are outside that range.
 - Ran `npm run build`; build completed successfully. Ran web-game Playwright smoke check and confirmed text state reports `dragon_attack_range: 5`.
+- Investigated Vercel green-screen deployment: production `dist/` was missing the root-level PNG/WAV assets because Vite only copies files from `public/` or imported assets. Moved all runtime image/audio assets into `public/` so existing `/asset-name` URLs work in dev and production.
+- Added `README.md` with project overview, local commands, structure, and Vercel asset troubleshooting notes.
+- Ran `npm run build`; production `dist/` now includes all PNG/WAV assets. Ran Vite preview plus web-game Playwright smoke check and visually inspected `output/web-game/shot-0.png`; the game board, terrain, party, dragon, and chest render correctly. Console check found no JS errors; one WAV request was aborted by the browser during idle load, which is harmless for the render fix.
